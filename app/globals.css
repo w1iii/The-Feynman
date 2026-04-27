@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --color-green: #2d6a4f;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.font-serif {
+  font-family: Georgia, serif;
+}
+
+.border {
+  border: 1px solid #e5e5e5;
+}
+
+.bg-green-800 {
+  background-color: var(--color-green);
+}
+
+.text-green-800 {
+  color: var(--color-green);
+}
