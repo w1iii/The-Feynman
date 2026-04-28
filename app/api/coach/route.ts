@@ -73,19 +73,56 @@ export async function POST(req: Request) {
       {"done": true, "passed": [0,1,2,3,4], "praise": "2–3 sentence specific praise referencing their actual words.", "gaps": []}
     `;
 
-    const response = await client.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemInstruction },
-        ...messages, // ✅ full history every time
-      ],
-      max_tokens: 300,
-      temperature: 0.4,
-    });
+    let response;
+    let usedFallback = false;
 
-    const raw = response.choices[0]?.message?.content ?? "";
-    const cleaned = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
+    try {
+      // Try primary model first
+      response = await client.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemInstruction },
+          ...messages,
+        ],
+        max_tokens: 300,
+        temperature: 0.4,
+      });
+    } catch (primaryError: any) {
+      // Check for rate limit (429) error
+      if (primaryError?.status === 429 || primaryError?.message?.includes('rate_limit')) {
+        console.warn("Primary model rate limited, falling back to llama-3.1-8b-instant");
+        usedFallback = true;
+        
+        response = await client.chat.completions.create({
+          model: "llama-3.1-8b-instant",
+          messages: [
+            { role: "system", content: systemInstruction },
+            ...messages,
+          ],
+          max_tokens: 300,
+          temperature: 0.4,
+        });
+      } else {
+        throw primaryError;
+      }
+    }
+
+    // Parse response with error handling
+    let parsed;
+    try {
+      const raw = response.choices[0]?.message?.content ?? "";
+      const cleaned = raw.replace(/```json|```/g, "").trim();
+      parsed = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", parseError);
+      return NextResponse.json(
+        { error: "Failed to parse AI response. Please try again.", done: false, passed: [], question: "Could you please try explaining that again?" },
+        { status: 500 }
+      );
+    }
+
+    // Ensure parsed has defaults
+    parsed = parsed || { done: false, passed: [], question: "Could you tell me more about that?" };
 
     // If conversation is done, save messages and update session
     if (parsed.done) {
@@ -125,6 +162,28 @@ export async function POST(req: Request) {
 
       if (insertError) {
         console.error("Failed to save messages:", insertError);
+      }
+
+      // Save criteria results
+      const passedIndices = parsed.passed ?? [];
+      const totalTurns = messages.length;
+      const criteriaResults = [];
+
+      for (let i = 0; i < 5; i++) {
+        criteriaResults.push({
+          session_id: session_id,
+          criterion_index: i,
+          passed: passedIndices.includes(i),
+          first_passed_turn: passedIndices.includes(i) ? totalTurns : null,
+        });
+      }
+
+      const { error: criteriaError } = await supabase
+        .from('criteria_results')
+        .insert(criteriaResults);
+
+      if (criteriaError) {
+        console.error("Failed to save criteria results:", criteriaError);
       }
 
       // Update session with final score

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '../../../lib/supabase/server'
 
+import { z } from 'zod';
+
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json()
 
@@ -8,6 +10,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: 'Email and password are required' },
       { status: 400 }
+    )
+  }
+
+  try{
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!emailRegex.test(email)){
+      return NextResponse.json(
+        { error: 'Email is not valid' },
+        { status: 400 }
+      )
+    }
+  }catch{
+    return NextResponse.json(
+      { error: 'Email is not valid' },
+      { status: 403 }
     )
   }
 
@@ -30,6 +47,22 @@ export async function POST(request: NextRequest) {
       { error: error.message },
       { status: 400 }
     )
+  }
+
+  // Create user profile with default free plan
+  if (data.user) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: data.user.id,
+        email: data.user.email,
+        plan: 'free',
+      })
+
+    if (profileError) {
+      // Log error but don't fail signup - profile can be created later
+      console.error('Failed to create profile:', profileError)
+    }
   }
 
   return NextResponse.json({

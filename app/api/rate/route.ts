@@ -43,22 +43,59 @@ export async function POST(req: Request) {
       }
     `;
 
-    const response = await client.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: systemInstruction },
-        { 
-          role: "user", 
-          content: `Concept: "${concept}"\n\nFinal explanation:\n\n${finalExplanation}` 
-        }
-      ],
-      max_tokens: 300,
-      temperature: 0.3, // lower = more consistent scoring
-    });
+    let response;
 
-    const raw = response.choices[0]?.message?.content ?? "";
-    const cleaned = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
+    try {
+      response = await client.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemInstruction },
+          { 
+            role: "user", 
+            content: `Concept: "${concept}"\n\nFinal explanation:\n\n${finalExplanation}` 
+          }
+        ],
+        max_tokens: 300,
+        temperature: 0.3,
+      });
+    } catch (primaryError: any) {
+      // Check for rate limit (429) error
+      if (primaryError?.status === 429 || primaryError?.message?.includes('rate_limit')) {
+        console.warn("Primary model rate limited, falling back to llama-3.1-8b-instant");
+        
+        response = await client.chat.completions.create({
+          model: "llama-3.1-8b-instant",
+          messages: [
+            { role: "system", content: systemInstruction },
+            { 
+              role: "user", 
+              content: `Concept: "${concept}"\n\nFinal explanation:\n\n${finalExplanation}` 
+            }
+          ],
+          max_tokens: 300,
+          temperature: 0.3,
+        });
+      } else {
+        throw primaryError;
+      }
+    }
+
+    // Parse response with error handling
+    let parsed;
+    try {
+      const raw = response.choices[0]?.message?.content ?? "";
+      const cleaned = raw.replace(/```json|```/g, "").trim();
+      parsed = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", parseError);
+      return NextResponse.json(
+        { error: "Failed to parse AI response. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    // Ensure parsed has defaults
+    parsed = parsed || { score: 50, label: "Good grasp", description: "Thank you for your submission.", strengths: ["Attempted explanation"] };
 
     return NextResponse.json({
       score: parsed.score,

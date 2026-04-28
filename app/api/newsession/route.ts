@@ -23,21 +23,32 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Check daily usage limit (free plan = 3 sessions/day)
-  const today = new Date().toISOString().split('T')[0]
-  
-  const { data: usage } = await supabase
-    .from('daily_usage')
-    .select('sessions_used')
-    .eq('user_id', user.id)
-    .eq('date', today)
+  // Check user's profile plan
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
     .single()
 
-  if (usage && usage.sessions_used >= 3) {
-    return NextResponse.json(
-      { error: 'Daily limit reached', upgrade: true },
-      { status: 403 }
-    )
+  const isPremium = profile?.plan === 'premium'
+
+  // Check daily usage limit only for non-premium users
+  if (!isPremium) {
+    const today = new Date().toISOString().split('T')[0]
+    
+    const { data: usage } = await supabase
+      .from('daily_usage')
+      .select('sessions_used')
+      .eq('user_id', user.id)
+      .eq('date', today)
+      .single()
+
+    if (usage && usage.sessions_used >= 3) {
+      return NextResponse.json(
+        { error: 'Daily limit reached', upgrade: true },
+        { status: 403 }
+      )
+    }
   }
 
   // Create session
@@ -59,21 +70,32 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Increment daily usage
-  if (usage) {
-    await supabase
+  // Increment daily usage only for non-premium users
+  if (!isPremium) {
+    const today = new Date().toISOString().split('T')[0]
+    
+    const { data: usage } = await supabase
       .from('daily_usage')
-      .update({ sessions_used: usage.sessions_used + 1 })
+      .select('sessions_used')
       .eq('user_id', user.id)
       .eq('date', today)
-  } else {
-    await supabase
-      .from('daily_usage')
-      .insert({
-        user_id: user.id,
-        date: today,
-        sessions_used: 1,
-      })
+      .single()
+
+    if (usage) {
+      await supabase
+        .from('daily_usage')
+        .update({ sessions_used: usage.sessions_used + 1 })
+        .eq('user_id', user.id)
+        .eq('date', today)
+    } else {
+      await supabase
+        .from('daily_usage')
+        .insert({
+          user_id: user.id,
+          date: today,
+          sessions_used: 1,
+        })
+    }
   }
 
   return NextResponse.json({
