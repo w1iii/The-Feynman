@@ -124,7 +124,41 @@ export async function POST(req: Request) {
     // Ensure parsed has defaults
     parsed = parsed || { done: false, passed: [], question: "Could you tell me more about that?" };
 
-    // If conversation is done, save messages and update session
+    // Save messages to database on every turn
+    // First, delete existing messages for this session to avoid conflicts
+    await supabase
+      .from('messages')
+      .delete()
+      .eq('session_id', session_id);
+
+    const messagesToInsert = messages.map((msg, index) => ({
+      session_id: session_id,
+      role: msg.role,
+      content: msg.content,
+      turn_number: index + 1,
+    }));
+
+    // Add the assistant's response as a message
+    const assistantContent = parsed.done 
+      ? (parsed.praise || "Great job completing the session!")
+      : (parsed.question || "Could you tell me more about that?");
+
+    messagesToInsert.push({
+      session_id: session_id,
+      role: "assistant",
+      content: assistantContent,
+      turn_number: messages.length + 1,
+    });
+
+    const { error: insertError } = await supabase
+      .from('messages')
+      .insert(messagesToInsert);
+
+    if (insertError) {
+      console.error("Failed to save messages:", insertError);
+    }
+
+    // If conversation is done, save criteria results and update session
     if (parsed.done) {
       const passedCount = (parsed.passed ?? []).length;
       
@@ -138,30 +172,6 @@ export async function POST(req: Request) {
       if (parsed.praise) scoreDescription += parsed.praise + " ";
       if (parsed.gaps && parsed.gaps.length > 0) {
         scoreDescription += "Areas to improve: " + parsed.gaps.join(", ");
-      }
-
-      // Save messages to database
-      const messagesToInsert = messages.map((msg, index) => ({
-        session_id: session_id,
-        role: msg.role,
-        content: msg.content,
-        turn_number: index + 1,
-      }));
-
-      // Also add the assistant's final response as a message
-      messagesToInsert.push({
-        session_id: session_id,
-        role: "assistant",
-        content: parsed.praise || "Great job completing the session!",
-        turn_number: messages.length + 1,
-      });
-
-      const { error: insertError } = await supabase
-        .from('messages')
-        .insert(messagesToInsert);
-
-      if (insertError) {
-        console.error("Failed to save messages:", insertError);
       }
 
       // Save criteria results
