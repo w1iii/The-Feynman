@@ -115,7 +115,7 @@ body {
 
 /* When sidebar is collapsed, move logo to main content area */
 .main-wrapper.sidebar-collapsed .logo {
-  left: 24px;
+  margin-left: 4rem;
 }
 
 .logo-the {
@@ -204,6 +204,7 @@ body {
 }
 
 .hint {
+  margin-top: 2rem;
   font-family: var(--serif);
   font-size: 19px;
   font-weight: 300;
@@ -1034,9 +1035,17 @@ body {
    INPUT AREA
 ───────────────────────────────────────── */
 .input-area {
-  margin-top: 24px;
   padding-top: 24px;
-  border-top: 1px solid var(--green-border);
+}
+
+.input-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.input-row .cursor {
+  margin-top: 8px;
 }
 
 /* ─────────────────────────────────────────

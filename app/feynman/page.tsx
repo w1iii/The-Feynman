@@ -112,11 +112,30 @@ export default function FeynmanPage() {
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("User:", user?.id);
+      
       if (user) {
         setUser(user as User);
-        const { data: profileData } = await supabase.from("profiles").select("plan").eq("id", user.id).single();
-        if (profileData) setProfile(profileData);
-        const { data: sessionsData } = await supabase.from("sessions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
+        
+        // Fetch profile with plan via server API
+        const profileRes = await fetch("/api/profile");
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          console.log("Profile data:", profileData);
+          setProfile({ plan: profileData.plan || "free" });
+        } else {
+          console.log("Profile fetch failed, using default");
+          setProfile({ plan: "free" });
+        }
+        
+        // Fetch sessions
+        const { data: sessionsData } = await supabase
+          .from("sessions")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        
         if (sessionsData) setSessions(sessionsData as Session[]);
       }
     } catch (err) {
@@ -581,7 +600,6 @@ export default function FeynmanPage() {
           {/* Empty state — before concept entered */}
           {!conceptConfirmed && messages.length === 0 && (
             <div className="hint-row">
-              <div className="cursor"></div>
               <p className="hint">
                 Pick any concept — a physics principle, a historical event,
                 a business idea, a coding pattern. The Feynman technique works on anything.
@@ -651,47 +669,50 @@ export default function FeynmanPage() {
               );
             })}
 
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="loading-dots">
-                <span></span><span></span><span></span>
-              </div>
-            )}
-
             <div ref={chatEndRef} />
           </div>
 
           {/* ── INPUT AREA ── */}
           {!finalSubmitted && !isReviewMode && (
             <div className="input-area">
-              {!conceptConfirmed ? (
-                // Single line for concept
-                <input
-                  ref={inputRef as React.RefObject<HTMLInputElement>}
-                  className="ghost-input"
-                  type="text"
-                  value={input}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={placeholder}
-                  autoComplete="off"
-                  maxLength={4000}
-                  autoFocus
-                />
-              ) : (
-                // Textarea for explanations
-                <textarea
-                  ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-                  className="ghost-input"
-                  value={input}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={placeholder}
-                  rows={coachingDone ? 5 : 3}
-                  maxLength={4000}
-                  autoFocus
-                />
+              {/* Loading indicator below input */}
+              {isLoading && (
+                <div className="loading-dots" style={{ marginTop: '12px', marginLeft: '14px' }}>
+                  <span></span><span></span><span></span>
+                </div>
               )}
+              
+              <div className="input-row">
+                <div className="cursor"></div>
+                {!conceptConfirmed ? (
+                  // Single line for concept
+                  <input
+                    ref={inputRef as React.RefObject<HTMLInputElement>}
+                    className="ghost-input"
+                    type="text"
+                    value={input}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={placeholder}
+                    autoComplete="off"
+                    maxLength={4000}
+                    autoFocus
+                  />
+                ) : (
+                  // Textarea for explanations
+                  <textarea
+                    ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+                    className="ghost-input"
+                    value={input}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={placeholder}
+                    rows={coachingDone ? 5 : 3}
+                    maxLength={4000}
+                    autoFocus
+                  />
+                )}
+              </div>
 
               <div className="bottom-bar">
                 <span className="char-count">{charCount} / 4000</span>
