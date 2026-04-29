@@ -1,4 +1,12 @@
 @import "tailwindcss";
+@font-face {
+  font-family: 'Galeriya';
+  src: url('/fonts/Galeriya.woff2') format('woff2'),
+       url('/fonts/Galeriya.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --color-green: #2d6a4f;
@@ -10,6 +18,18 @@ body {
 
 .font-serif {
   font-family: Georgia, serif;
+}
+
+.logo-script {
+  font-family: var(--font-script), cursive;
+}
+
+.logo-serif {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+.logo-sans {
+  font-family: var(--font-sans), sans-serif;
 }
 
 .border {
