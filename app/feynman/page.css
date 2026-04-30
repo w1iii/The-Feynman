@@ -1029,6 +1029,12 @@ body {
     max-width: none;
   }
 
+  /* Override collapsed when mobile menu is open */
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    max-width: 360px;
+  }
+
   .main-wrapper {
     margin-left: 0;
   }
@@ -1074,6 +1080,12 @@ body {
 
   .sidebar.collapsed {
     transform: translateX(-100%);
+  }
+
+  /* Override collapsed when mobile menu is open */
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    max-width: 100%;
   }
 
   .sidebar-header {
@@ -1237,6 +1249,11 @@ body {
   .hamburger {
     top: 16px;
     left: 16px;
+  }
+
+  /* Hide sidebar-show-btn on mobile — hamburger handles it */
+  .sidebar-show-btn {
+    display: none !important;
   }
 
   /* Sidebar show button */
