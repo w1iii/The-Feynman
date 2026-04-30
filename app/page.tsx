@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import "./page.css";
 
 export default function LandingPage() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <>
       <div className="grain-overlay"></div>
@@ -12,9 +17,27 @@ export default function LandingPage() {
           Feynman
         </Link>
         
-        <div className="navbar-actions">
-          <Link href="/login" className="navbar-signin">Sign In</Link>
-          <Link href="/signup" className="navbar-cta">Get Started</Link>
+        {/* Hamburger (mobile) */}
+        <button className="navbar-hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            {menuOpen ? (
+              <>
+                <path d="M18 6L6 18" />
+                <path d="M6 6l12 12" />
+              </>
+            ) : (
+              <>
+                <path d="M3 12h18" />
+                <path d="M3 6h18" />
+                <path d="M3 18h18" />
+              </>
+            )}
+          </svg>
+        </button>
+
+        <div className={`navbar-actions ${menuOpen ? "navbar-actions--open" : ""}`}>
+          <Link href="/login" className="navbar-signin" onClick={() => setMenuOpen(false)}>Sign In</Link>
+          <Link href="/signup" className="navbar-cta" onClick={() => setMenuOpen(false)}>Get Started</Link>
         </div>
       </nav>
       

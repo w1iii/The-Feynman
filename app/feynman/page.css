@@ -1016,8 +1016,8 @@ body {
 }
 
 /* ─────────────────────────────────────────
-   RESPONSIVE
-───────────────────────────────────────── */
+   RESPONSIVE — Tablet
+ ───────────────────────────────────────── */
 @media (max-width: 1024px) {
   .sidebar {
     width: 100%;
@@ -1059,6 +1059,223 @@ body {
   .bottom-left {
     left: 32px;
     bottom: 32px;
+  }
+}
+
+/* ─────────────────────────────────────────
+   RESPONSIVE — Mobile phones
+ ───────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Sidebar full-screen on mobile */
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+
+  .sidebar-header {
+    padding: 16px 20px;
+  }
+
+  .profile-section {
+    padding: 16px 20px;
+  }
+
+  .profile-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .profile-name {
+    font-size: 15px;
+  }
+
+  .profile-email {
+    font-size: 12px;
+  }
+
+  .new-session-section {
+    padding: 12px 20px;
+  }
+
+  .history-section {
+    padding: 16px 20px;
+  }
+
+  .sidebar-footer {
+    padding: 12px 20px;
+  }
+
+  /* Main wrapper full width */
+  .main-wrapper {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 3.5rem;
+  }
+
+  .main-wrapper.sidebar-collapsed {
+    margin-left: 0;
+  }
+
+  /* Logo smaller, repositioned */
+  .logo {
+    left: 56px;
+    top: 16px;
+  }
+
+  .logo-the {
+    font-size: 14px;
+  }
+
+  .logo-script {
+    font-size: 48px;
+  }
+
+  /* Step dots smaller, repositioned */
+  .dots {
+    right: 16px;
+    top: 24px;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Main content area */
+  .main-content {
+    margin-top: 100px;
+    padding: 0 16px 60px 16px;
+    max-width: 100%;
+  }
+
+  /* Chat area */
+  .chat-area {
+    max-width: 100%;
+  }
+
+  .msg-ai-text {
+    font-size: 16px;
+    max-width: 100%;
+  }
+
+  .msg-user {
+    font-size: 18px;
+  }
+
+  /* Criteria pills */
+  .pills {
+    padding-left: 0;
+  }
+
+  .pill {
+    font-size: 9px;
+    padding: 3px 10px;
+  }
+
+  /* Hint text */
+  .hint {
+    font-size: 16px;
+    margin-top: 1rem;
+  }
+
+  /* Ghost input */
+  .ghost-input {
+    font-size: 20px;
+  }
+
+  /* Bottom bar — full width on mobile */
+  .bottom-bar {
+    right: 16px;
+    left: 16px;
+    bottom: 16px;
+    justify-content: space-between;
+  }
+
+  /* Score card */
+  .score-card {
+    padding: 20px 16px;
+  }
+
+  .score-num {
+    font-size: 64px;
+  }
+
+  .score-label-text {
+    font-size: 12px;
+  }
+
+  .score-desc {
+    font-size: 16px;
+    max-width: 100%;
+  }
+
+  /* Review header */
+  .review-header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+  }
+
+  .review-concept {
+    font-size: 16px;
+  }
+
+  /* Error message */
+  .error-message {
+    padding: 12px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  /* Hamburger repositioned */
+  .hamburger {
+    top: 16px;
+    left: 16px;
+  }
+
+  /* Sidebar show button */
+  .sidebar-show-btn {
+    top: 16px;
+    left: 16px;
+  }
+
+  /* Body area */
+  .body {
+    margin-top: 100px;
+    max-width: 100%;
+  }
+
+  /* S4 body */
+  .s4-body {
+    margin-top: 140px;
+    padding-bottom: 80px;
+  }
+
+  .summary-title {
+    font-size: 40px;
+  }
+
+  .crit-row {
+    font-size: 15px;
+  }
+
+  .best-quote {
+    font-size: 15px;
+  }
+
+  .gap-box {
+    font-size: 14px;
+    padding: 12px 14px;
+  }
+
+  .strength {
+    font-size: 15px;
   }
 }
 

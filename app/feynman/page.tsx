@@ -103,12 +103,6 @@ export default function FeynmanPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    fetchUserData();
-  }, []);
-
   const fetchUserData = async () => {
     try {
       const supabase = createClient();
@@ -143,6 +137,12 @@ export default function FeynmanPage() {
       console.log("Error fetching user:", err);
     }
   };
+
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    fetchUserData();
+  }, []);
 
   // ── load a past session ──
   const loadSession = async (sessionId: string) => {

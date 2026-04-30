@@ -230,3 +230,50 @@ body {
   color: var(--green-dark);
   border-color: var(--green-dark);
 }
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0 16px;
+    height: 64px;
+  }
+
+  .navbar-logo {
+    font-size: 22px;
+  }
+
+  .navbar-actions {
+    gap: 12px;
+  }
+
+  .navbar-home {
+    font-size: 13px;
+  }
+
+  .login-container {
+    padding-top: 64px;
+  }
+
+  .login-box {
+    margin: 0 16px;
+    padding: 28px 20px;
+  }
+
+  .login-title {
+    font-size: 24px;
+  }
+
+  .login-subtitle {
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+
+  .form-input {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  .form-button {
+    padding: 14px;
+  }
+}
