@@ -4,6 +4,8 @@ import { createClient } from '../../lib/supabase/server'
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
 
+
+
   // Get current user from auth
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -14,11 +16,16 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  console.log("=================")
+  console.log("Profile Route")
+  console.log("User id : ", user.id)
+  console.log("=================")
+
   // Fetch user's profile
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('plan')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single()
 
   if (profileError) {
