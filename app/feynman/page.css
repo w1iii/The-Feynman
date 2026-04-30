@@ -1,11 +1,11 @@
 /* ─────────────────────────────────────────
    FONT IMPORTS
-───────────────────────────────────────── */
+ ───────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Great+Vibes&family=Josefin+Sans:wght@200;300;400&display=swap');
 
 /* ─────────────────────────────────────────
    RESET & VARIABLES
-───────────────────────────────────────── */
+ ───────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -30,13 +30,21 @@
 
 html {
   height: 100%;
-  background: var(--mint);
+  background: linear-gradient(120deg, #a8e6cf 0%, #dcedc1 25%, #ffd3a5 50%, #a8e6cf 75%, #dcedc1 100%);
+  background-size: 400% 400%;
+  animation: gradientBG 8s ease infinite;
   scroll-behavior: smooth;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 body {
   min-height: 100%;
-  background: var(--mint);
+  background: transparent;
   color: var(--text);
   font-family: var(--serif);
   overflow-x: hidden;
@@ -44,7 +52,7 @@ body {
 
 /* ─────────────────────────────────────────
    MAIN CONTENT AREA
-───────────────────────────────────────── */
+ ───────────────────────────────────────── */
 
 .main-content {
   margin-top: 150px;
@@ -99,6 +107,7 @@ body {
    LOGO
 ───────────────────────────────────────── */
 .logo {
+  margin-top: 4rem;
   position: absolute;
   top: 40px;
   left: 64px;
@@ -147,6 +156,7 @@ body {
   display: flex;
   gap: 14px;
   align-items: center;
+  margin-top: 4rem;
 }
 
 .dot {
@@ -667,7 +677,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--green-border);
 }
 
 .sidebar-toggle {
@@ -688,6 +697,7 @@ body {
 /* Profile Section */
 .profile-section {
   padding: 24px 32px;
+  padding-top: 0px;
   border-bottom: 1px solid var(--green-border);
 }
 
@@ -917,6 +927,7 @@ body {
   flex: 1;
   margin-left: 320px;
   transition: margin-left 0.3s ease;
+  margin-top: 5rem;
 }
 
 .main-wrapper.sidebar-collapsed {
