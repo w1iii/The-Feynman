@@ -12,12 +12,6 @@ export default function LandingPage() {
           Feynman
         </Link>
         
-        <div className="navbar-links">
-          <Link href="#" className="navbar-link active">Approach</Link>
-          <Link href="#" className="navbar-link">Library</Link>
-          <Link href="#" className="navbar-link">Principles</Link>
-        </div>
-        
         <div className="navbar-actions">
           <Link href="/login" className="navbar-signin">Sign In</Link>
           <Link href="/signup" className="navbar-cta">Get Started</Link>
@@ -62,7 +56,10 @@ export default function LandingPage() {
                 Pick any topic you want to understand — physics, history, coding, business — anything. Start with the curiosity that drives you.
               </p>
               <div className="step-icon">
-                <span>school</span>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
               </div>
             </div>
             
@@ -74,7 +71,16 @@ export default function LandingPage() {
                 Teach it in plain language as if explaining to a child. We&apos;ll guide you through the gaps, identifying where your explanation falters.
               </p>
               <div className="step-icon">
-                <span>lightbulb</span>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18h6"/>
+                  <path d="M10 22h4"/>
+                  <path d="M12 2v1"/>
+                  <path d="M12 8v4"/>
+                  <path d="M12 16h.01"/>
+                  <path d="M8 12h.01"/>
+                  <path d="M16 12h.01"/>
+                  <path d="M12 14c1.5 0 3-1 3-2.5S14 9 12 9s-3 1-3 2.5S10.5 14 12 14z"/>
+                </svg>
               </div>
             </div>
             
@@ -86,7 +92,11 @@ export default function LandingPage() {
                 Get feedback, fill in the blanks, and build true understanding that lasts. Refine your knowledge until the complex becomes intuitive.
               </p>
               <div className="step-icon">
-                <span>auto_stories</span>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+                  <path d="M8 7h6"/>
+                  <path d="M8 11h8"/>
+                </svg>
               </div>
             </div>
           </div>
@@ -96,7 +106,10 @@ export default function LandingPage() {
         <section className="detail-section">
           <div className="detail-content">
             <div className="detail-quote-box">
-              <span className="detail-quote-icon">history_edu</span>
+              <svg className="detail-quote-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+                <path d="M5 20h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
+              </svg>
               <h4 className="detail-quote-title">The Philosophy of Simplicity</h4>
               <p className="detail-quote-text">
                 &ldquo;If you can&apos;t explain it simply, you don&apos;t understand it well enough.&rdquo;
@@ -136,9 +149,6 @@ export default function LandingPage() {
           &copy; 2024 Feynman Learning. Built for the intellectually curious.
         </span>
         <div className="footer-links">
-          <Link href="#" className="footer-link">Methods</Link>
-          <Link href="#" className="footer-link">Academic Integrity</Link>
-          <Link href="#" className="footer-link">Privacy</Link>
           <Link href="/login" className="footer-link">Sign In</Link>
         </div>
       </footer>

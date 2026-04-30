@@ -93,6 +93,7 @@ export default function FeynmanPage() {
   const [charCount, setCharCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
@@ -474,7 +475,7 @@ export default function FeynmanPage() {
     : "Write your explanation…";
 
   return (
-    <div className="app-layout">
+    <div className="app-layout" style={{ animation: 'fadeIn 0.5s ease-out' }}>
       {/* Mobile Hamburger */}
       <button className="hamburger" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -682,7 +683,7 @@ export default function FeynmanPage() {
                 </div>
               )}
               
-              <div className="input-row">
+              <div className={`input-row ${inputFocused ? 'input-focused' : ''}`}>
                 <div className="cursor"></div>
                 {!conceptConfirmed ? (
                   // Single line for concept
@@ -697,6 +698,8 @@ export default function FeynmanPage() {
                     autoComplete="off"
                     maxLength={4000}
                     autoFocus
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
                   />
                 ) : (
                   // Textarea for explanations
@@ -710,6 +713,8 @@ export default function FeynmanPage() {
                     rows={coachingDone ? 5 : 3}
                     maxLength={4000}
                     autoFocus
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
                   />
                 )}
               </div>

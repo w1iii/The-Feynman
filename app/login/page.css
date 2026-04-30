@@ -32,6 +32,29 @@ body {
   line-height: 1.6;
 }
 
+/* ANIMATIONS */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* NAVBAR */
 .navbar {
   position: fixed;
@@ -48,6 +71,7 @@ body {
   margin: 0 auto;
   background: var(--surface);
   border-bottom: 1px solid var(--green-border);
+  animation: slideDown 0.5s ease-out;
 }
 
 .navbar-logo {
@@ -84,6 +108,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: fadeIn 0.6s ease-out;
 }
 
 .login-box {
