@@ -2,15 +2,16 @@
 
 import { FormEvent, useState } from "react";
 import { createClient } from "../lib/supabase/client";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import "./page.css";
 
-export default function SignupPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const router = useRouter();
   const supabase = createClient();
 
   async function handleSubmit(e: FormEvent) {
@@ -18,7 +19,7 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -27,33 +28,8 @@ export default function SignupPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      setSuccess(true);
+      router.push("/feynman");
     }
-  }
-
-  if (success) {
-    return (
-      <>
-        <nav className="navbar">
-          <Link href="/" className="navbar-logo">
-            Feynman
-          </Link>
-          
-          <div className="navbar-actions">
-            <Link href="/" className="navbar-home">Home</Link>
-          </div>
-        </nav>
-        
-        <div className="success-container">
-          <div className="success-box">
-            <h1 className="success-title">Check your email</h1>
-            <p className="success-text">
-              We sent a confirmation link to {email}.
-            </p>
-          </div>
-        </div>
-      </>
-    );
   }
 
   return (
@@ -68,10 +44,10 @@ export default function SignupPage() {
         </div>
       </nav>
       
-      <div className="signup-container">
-        <div className="signup-box">
-          <h1 className="signup-title">Create account</h1>
-          <p className="signup-subtitle">Start learning deeply</p>
+      <div className="login-container">
+        <div className="login-box">
+          <h1 className="login-title">Sign In</h1>
+          <p className="login-subtitle">Welcome back</p>
 
           <form onSubmit={handleSubmit}>
             {error && <div className="error-message">{error}</div>}
@@ -100,18 +76,17 @@ export default function SignupPage() {
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                minLength={6}
                 required
               />
             </div>
 
             <button type="submit" className="form-button" disabled={loading}>
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
           <p className="form-footer">
-            Already have an account? <Link href="/login">Sign in</Link>
+            Don&apos;t have an account? <Link href="/signup">Sign up</Link>
           </p>
         </div>
       </div>
