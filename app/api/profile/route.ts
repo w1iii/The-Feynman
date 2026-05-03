@@ -38,5 +38,45 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     plan: profile?.plan || 'free',
+    display_name: user.user_metadata?.full_name || '',
+  })
+}
+
+export async function PUT(request: NextRequest) {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+
+  const body = await request.json()
+  const { display_name } = body
+
+  if (!display_name || typeof display_name !== 'string') {
+    return NextResponse.json(
+      { error: 'Display name is required' },
+      { status: 400 }
+    )
+  }
+
+  // Update user metadata (full_name)
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: { full_name: display_name.trim() }
+  })
+
+  if (updateError) {
+    return NextResponse.json(
+      { error: updateError.message },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({
+    display_name: display_name.trim(),
   })
 }
