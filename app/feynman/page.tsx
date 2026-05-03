@@ -249,6 +249,26 @@ export default function FeynmanPage() {
         const errData = await res.json();
         throw new Error(errData.error || "Failed to delete session");
       }
+
+      // Remove deleted session from state
+      setSessions(prevSessions => 
+        prevSessions.filter(session => session.id !== sessionIdToDelete)
+      )
+
+      // If the deleted session was the active one, reset the view
+      if (sessionId === sessionIdToDelete) {
+        setSessionId(null)
+        setMessages([])
+        setApiMessages([])
+        setStage(1)
+        setConcept('')
+        setConceptConfirmed(false)
+        setCoachingDone(false)
+        setFinalSubmitted(false)
+        setScore(null)
+        setPassed([])
+        setIsReviewMode(false)
+      }
     } catch (err) {
       setError("Failed to delete session");
     }
