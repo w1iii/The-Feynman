@@ -241,20 +241,11 @@ export default function FeynmanPage() {
   // ── delete session ──
   const deleteSession = async (sessionIdToDelete: string) => {
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .eq('id', sessionIdToDelete);
+      const res = await fetch(`/api/deleteSession/${sessionIdToDelete}`)
 
-      if (error) throw error;
-
-      // Remove from local state
-      setSessions(prev => prev.filter(s => s.id !== sessionIdToDelete));
-
-      // If deleting current session, reset
-      if (sessionId === sessionIdToDelete) {
-        resetSession();
+      if(!res.ok){
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to delete session");
       }
     } catch (err) {
       setError("Failed to delete session");
