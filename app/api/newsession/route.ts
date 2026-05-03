@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '../../lib/supabase/server'
+import { invalidateUserSessionsAndStats } from '../../lib/redis/cache'
 
 export async function POST(request: NextRequest) {
   const { concept } = await request.json()
@@ -97,6 +98,9 @@ export async function POST(request: NextRequest) {
         })
     }
   }
+
+  // Invalidate cached sessions and stats
+  await invalidateUserSessionsAndStats(user.id)
 
   return NextResponse.json({
     id: data.id,

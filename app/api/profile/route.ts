@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '../../lib/supabase/server'
+import { getCached, setCached, CacheKeys, CacheTTLs, invalidateCache } from '../../lib/redis/cache'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
 
-
-
-  // Get current user from auth
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
   if (authError || !user) {
@@ -16,12 +14,12 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  console.log("=================")
-  console.log("Profile Route")
-  console.log("User id : ", user.id)
-  console.log("=================")
+  const cacheKey = CacheKeys.profile(user.id)
+  const cached = await getCached(cacheKey)
+  if (cached) {
+    return NextResponse.json(cached)
+  }
 
-  // Fetch user's profile
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('plan')
@@ -36,10 +34,14 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  return NextResponse.json({
+  const response = {
     plan: profile?.plan || 'free',
     display_name: user.user_metadata?.full_name || '',
-  })
+  }
+
+  await setCached(cacheKey, response, CacheTTLs.profile)
+
+  return NextResponse.json(response)
 }
 
 export async function PUT(request: NextRequest) {
@@ -64,7 +66,6 @@ export async function PUT(request: NextRequest) {
     )
   }
 
-  // Update user metadata (full_name)
   const { error: updateError } = await supabase.auth.updateUser({
     data: { full_name: display_name.trim() }
   })
@@ -75,6 +76,8 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     )
   }
+
+  await invalidateCache(CacheKeys.profile(user.id))
 
   return NextResponse.json({
     display_name: display_name.trim(),

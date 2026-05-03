@@ -1,6 +1,7 @@
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "../../lib/supabase/server";
+import { invalidateUserSessionsAndStats } from "../../lib/redis/cache";
 
 type Message = {
   role: "user" | "assistant";
@@ -210,6 +211,9 @@ export async function POST(req: Request) {
       if (updateError) {
         console.error("Failed to update session:", updateError);
       }
+
+      // Invalidate cached sessions and stats since session status changed
+      await invalidateUserSessionsAndStats(user.id);
     }
 
     return NextResponse.json({
