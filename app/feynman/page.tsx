@@ -241,7 +241,9 @@ export default function FeynmanPage() {
   // ── delete session ──
   const deleteSession = async (sessionIdToDelete: string) => {
     try {
-      const res = await fetch(`/api/deleteSession/${sessionIdToDelete}`)
+      const res = await fetch(`/api/deletesession/${sessionIdToDelete}`, {
+        method: 'DELETE'
+      })
 
       if(!res.ok){
         const errData = await res.json();

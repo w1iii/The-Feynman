@@ -36,8 +36,27 @@ export async function DELETE(
     )
   }
 
-  // Fetch messages for this session
+  // Delete related messages first
+  const { error: messagesError } = await supabase
+    .from('messages')
+    .delete()
+    .eq('session_id', sessionIdToDelete)
 
+  if (messagesError) {
+    console.error('Failed to delete messages:', messagesError)
+  }
+
+  // Delete related criteria results
+  const { error: criteriaError } = await supabase
+    .from('criteria_results')
+    .delete()
+    .eq('session_id', sessionIdToDelete)
+
+  if (criteriaError) {
+    console.error('Failed to delete criteria results:', criteriaError)
+  }
+
+  // Delete the session
   const { error } = await supabase
     .from('sessions')
     .delete()
