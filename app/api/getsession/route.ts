@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '../../lib/supabase/server'
+import { getCached, setCached, CacheKeys, CacheTTLs } from '../../lib/redis/cache'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -11,6 +12,12 @@ export async function GET(request: NextRequest) {
       { error: 'Unauthorized' },
       { status: 401 }
     )
+  }
+
+  const cacheKey = CacheKeys.sessions(user.id)
+  const cached = await getCached(cacheKey)
+  if (cached) {
+    return NextResponse.json(cached)
   }
 
   const { data: sessions, error } = await supabase
@@ -26,14 +33,11 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (!sessions || sessions.length === 0) {
-    return NextResponse.json(
-      { sessions: [], message: 'No sessions yet' },
-      { status: 200 }
-    )
-  }
+  const response = !sessions || sessions.length === 0
+    ? { sessions: [], message: 'No sessions yet' }
+    : { sessions }
 
-  return NextResponse.json({
-    sessions: sessions,
-  })
+  await setCached(cacheKey, response, CacheTTLs.sessions)
+
+  return NextResponse.json(response)
 }
