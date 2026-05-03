@@ -51,40 +51,45 @@ export default function SettingsPage() {
   const fetchUserData = async () => {
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
 
-      if (user) {
-        setUser(user as User);
-        setDisplayName(user.user_metadata?.full_name || "");
+      // Fire all requests in parallel
+      const [userResult, profileRes, statsRes, sessionsRes] = await Promise.all([
+        supabase.auth.getUser(),
+        fetch("/api/profile"),
+        fetch("/api/stats"),
+        fetch("/api/getsession"),
+      ]);
 
-        // Fetch profile
-        const profileRes = await fetch("/api/profile");
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          setProfile({
-            plan: profileData.plan || "free",
-            display_name: profileData.display_name || "",
-          });
-        }
+      const { data: { user }, error: authError } = userResult;
 
-        // Fetch stats
-        setStatsLoading(true);
-        const statsRes = await fetch("/api/stats");
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setStats(statsData);
-        }
+      if (authError || !user) {
         setStatsLoading(false);
+        return;
+      }
 
-        // Fetch sessions for sidebar
-        const { data: sessionsData } = await supabase
-          .from("sessions")
-          .select("id, concept, created_at, status")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(20);
+      setUser(user as User);
+      setDisplayName(user.user_metadata?.full_name || "");
 
-        if (sessionsData) setSessions(sessionsData);
+      // Handle profile
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setProfile({
+          plan: profileData.plan || "free",
+          display_name: profileData.display_name || "",
+        });
+      }
+
+      // Handle stats
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData);
+      }
+      setStatsLoading(false);
+
+      // Handle sessions
+      if (sessionsRes.ok) {
+        const sessionsData = await sessionsRes.json();
+        if (sessionsData.sessions) setSessions(sessionsData.sessions);
       }
     } catch (err) {
       console.log("Error fetching user:", err);

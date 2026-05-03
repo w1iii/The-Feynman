@@ -4,8 +4,8 @@ let redis: Redis | null = null
 
 export function getRedisClient() {
   if (!redis) {
-    const url = process.env.REDIS_URL
-    const token = process.env.REDIS_TOKEN
+    const url = process.env.UPSTASH_REDIS_REST_URL
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN
 
     if (!url || !token) {
       return null

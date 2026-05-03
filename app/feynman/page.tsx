@@ -106,37 +106,48 @@ export default function FeynmanPage() {
   const fetchUserData = async () => {
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log("User:", user?.id);
-      
-      if (user) {
-        setUser(user as User);
-        
-        // Fetch profile with plan via server API
-        const profileRes = await fetch("/api/profile");
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          console.log("Profile data:", profileData);
-          setProfile({ plan: profileData.plan || "free" });
-        } else {
-          console.log("Profile fetch failed, using default");
-          setProfile({ plan: "free" });
-        }
-        
-        // Fetch sessions
-        const { data: sessionsData } = await supabase
-          .from("sessions")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(20);
-        
-        if (sessionsData) setSessions(sessionsData as Session[]);
+
+      // Fire all three requests in parallel
+      const [userResult, profileRes, sessionsRes] = await Promise.all([
+        supabase.auth.getUser(),
+        fetch("/api/profile"),
+        fetch("/api/getsession"),
+      ]);
+
+      const { data: { user }, error: authError } = userResult;
+
+      if (authError || !user) return;
+
+      setUser(user as User);
+
+      // Handle profile
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setProfile({ plan: profileData.plan || "free" });
+      } else {
+        setProfile({ plan: "free" });
+      }
+
+      // Handle sessions
+      if (sessionsRes.ok) {
+        const sessionsData = await sessionsRes.json();
+        if (sessionsData.sessions) setSessions(sessionsData.sessions as Session[]);
       }
     } catch (err) {
       console.log("Error fetching user:", err);
     }
   };
+
+  // ── handle ?session= URL param on mount ──
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionIdParam = params.get("session");
+    if (sessionIdParam) {
+      // Clear URL param without reload
+      window.history.replaceState({}, "", "/feynman");
+      loadSession(sessionIdParam);
+    }
+  }, []);
 
   useEffect(() => {
     if (initialized.current) return;
