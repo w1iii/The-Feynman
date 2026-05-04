@@ -295,14 +295,11 @@ export default function SettingsPage() {
 
         {/* Logo */}
         <a href="/feynman" className="logo">
-          <span className="logo-the">The</span>
-          <span className="logo-script">Feynman</span>
+          <span className="logo-script">Settings</span>
         </a>
 
         {/* ── SETTINGS CONTENT ── */}
         <div className="main-content settings-content">
-          <h1 className="settings-title">Settings</h1>
-
           {/* Save message */}
           {saveMessage && (
             <div className={`save-message ${saveMessage.type}`}>

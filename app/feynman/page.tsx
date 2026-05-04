@@ -97,11 +97,22 @@ export default function FeynmanPage() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
+  const scoreSectionRef = useRef<HTMLDivElement>(null);
 
   // ── scroll to bottom on new message ──
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // ── smooth scroll to score section when it appears ──
+  useEffect(() => {
+    const hasScore = messages.some(m => m.role === "ai" && m.content.startsWith("__SCORE__"));
+    if (hasScore && scoreSectionRef.current) {
+      setTimeout(() => {
+        scoreSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [messages]);
 
   const fetchUserData = async () => {
     try {
@@ -659,29 +670,77 @@ export default function FeynmanPage() {
             </div>
           )}
 
+          {/* Score section — separated from chat */}
+          {(() => {
+            const scoreMsg = messages.find(m => m.role === "ai" && m.content.startsWith("__SCORE__"));
+            if (!scoreMsg) return null;
+            
+            const data = JSON.parse(scoreMsg.content.replace("__SCORE__", ""));
+            const scoreIndex = messages.indexOf(scoreMsg);
+            const questionCount = messages.slice(0, scoreIndex).filter(m => m?.role === "user").length;
+            const criteriaMet = passed.length;
+            const statusReady = criteriaMet === 5;
+
+            const encouragementMap: Record<string, string> = {
+              "Expert-level clarity": "Brilliant work! You've truly mastered this concept.",
+              "Strong understanding": "Great job! You have a solid grasp with room to refine.",
+              "Good grasp": "Nice progress! Keep building on what you know.",
+              "Developing understanding": "You're getting there — keep exploring the gaps.",
+              "Keep exploring": "Every attempt builds understanding. Try again!",
+            };
+            const encouragement = encouragementMap[data.label] || "Well done! Keep learning and growing.";
+
+            return (
+              <div ref={scoreSectionRef} className="score-section">
+                {/* 3 stat cards */}
+                <div className="score-stats-grid">
+                  <div className="score-stat-card">
+                    <div className="score-stat-number">{criteriaMet}/5</div>
+                    <div className="score-stat-label">Criteria Met</div>
+                  </div>
+                  <div className="score-stat-card">
+                    <div className="score-stat-number">{questionCount}</div>
+                    <div className="score-stat-label">Questions Asked</div>
+                  </div>
+                  <div className="score-stat-card">
+                    <div className={`score-stat-number ${statusReady ? "status-ready" : "status-progress"}`}>
+                      {statusReady ? "Ready" : "In Progress"}
+                    </div>
+                    <div className="score-stat-label">Status</div>
+                  </div>
+                </div>
+
+                {/* Encouragement message */}
+                <div className="encouragement-msg">
+                  <p>{encouragement}</p>
+                </div>
+
+                {/* Score card */}
+                <div className="score-card">
+                  <div className="score-num">{data.score}</div>
+                  <div className="score-label-text">{data.label}</div>
+                  <p className="score-desc">{data.description}</p>
+                  <div className="strengths">
+                    {data.strengths?.map((s: string, j: number) => (
+                      <div key={j} className="strength">{s}</div>
+                    ))}
+                  </div>
+                  <button className="btn" style={{ marginTop: "28px" }} onClick={resetSession}>
+                    New concept
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Chat messages */}
           <div className="chat-area">
             {messages.map((msg, i) => {
               if (!msg?.content) return null;
               
-              // Score card message
+              // Skip score message (rendered above)
               if (msg.role === "ai" && msg.content.startsWith("__SCORE__")) {
-                const data = JSON.parse(msg.content.replace("__SCORE__", ""));
-                return (
-                  <div key={i} className="score-card">
-                    <div className="score-num">{data.score}</div>
-                    <div className="score-label-text">{data.label}</div>
-                    <p className="score-desc">{data.description}</p>
-                    <div className="strengths">
-                      {data.strengths?.map((s: string, j: number) => (
-                        <div key={j} className="strength">{s}</div>
-                      ))}
-                    </div>
-                    <button className="btn" style={{ marginTop: "28px" }} onClick={resetSession}>
-                      New concept
-                    </button>
-                  </div>
-                );
+                return null;
               }
 
               return msg.role === "ai" ? (
