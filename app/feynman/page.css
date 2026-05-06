@@ -129,6 +129,7 @@ body {
   line-height: 1;
   text-decoration: none;
   z-index: 10;
+  transition: 0.3s ease;
 }
 
 .logo-the {
@@ -1034,7 +1035,9 @@ body {
   }
 
   .main-wrapper.sidebar-collapsed .logo {
+    margin-left: 5rem;
     left: 24px;
+    transition: 0.3s ease;
   }
 }
 
