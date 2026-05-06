@@ -210,7 +210,7 @@ export default function SettingsPage() {
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileMenuOpen ? "mobile-open" : ""}`}>
         <div className="sidebar-header">
-          <button className="sidebar-toggle" onClick={() => setSidebarCollapsed(true)}>
+          <button className="sidebar-toggle" onClick={() => { setSidebarCollapsed(true); setMobileMenuOpen(false); }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M15 18l-6-6 6-6" />
             </svg>

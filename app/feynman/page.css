@@ -122,24 +122,13 @@ body {
    LOGO
 ───────────────────────────────────────── */
 .logo {
-  margin-top: 4rem;
+  margin-top: 1rem;
   position: absolute;
-  top: 40px;
-  left: 64px;
+  top: 16px;
+  left: 56px;
   line-height: 1;
   text-decoration: none;
   z-index: 10;
-}
-
-/* When sidebar is shown, position logo in main content area */
-.main-wrapper .logo {
-  transition: 0.3s;
-  left: 22rem;
-}
-
-/* When sidebar is collapsed, move logo to main content area */
-.main-wrapper.sidebar-collapsed .logo {
-  margin-left: 4rem;
 }
 
 .logo-the {
@@ -959,10 +948,6 @@ body {
   margin-left: 5rem;
 }
 
-.main-wrapper.sidebar-collapsed .logo {
-  left: 24px;
-}
-
 /* Hamburger (mobile trigger) */
 .hamburger {
   display: none;
@@ -1034,6 +1019,23 @@ body {
 
 .sidebar-overlay.visible {
   display: block;
+}
+
+/* Desktop positioning (above tablet breakpoint) */
+@media (min-width: 1025px) {
+  .logo {
+    left: 64px;
+    top: 40px;
+    margin-top: 4rem;
+  }
+
+  .main-wrapper .logo {
+    left: 22rem;
+  }
+
+  .main-wrapper.sidebar-collapsed .logo {
+    left: 24px;
+  }
 }
 
 /* ─────────────────────────────────────────
@@ -1166,18 +1168,8 @@ body {
     margin-top: 3.5rem;
   }
 
-  .main-wrapper .logo {
-    margin-left: 0;
-  }
-
   .main-wrapper.sidebar-collapsed {
     margin-left: 0;
-  }
-
-  /* Logo smaller, repositioned */
-  .logo {
-    left: 56px;
-    top: 16px;
   }
 
   .logo-the {
