@@ -970,11 +970,27 @@ body {
   top: 24px;
   left: 24px;
   z-index: 90;
-  background: none;
-  border: none;
+  background: var(--surface);
+  border: 1px solid var(--green-border);
+  border-radius: 10px;
   cursor: pointer;
-  padding: 8px;
+  padding: 10px;
   color: var(--green);
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(45, 107, 74, 0.1);
+  transition: all 0.2s ease;
+}
+
+.hamburger:hover {
+  background: var(--green-mid);
+}
+
+.hamburger svg {
+  width: 28px;
+  height: 28px;
 }
 
 /* Sidebar Show Button (appears when sidebar collapsed) */
@@ -1027,6 +1043,8 @@ body {
   .sidebar {
     width: 100%;
     max-width: 360px;
+    /* Hidden by default on tablet/mobile — only show when mobile-open */
+    transform: translateX(-100%);
   }
 
   .sidebar.collapsed {
@@ -1034,7 +1052,7 @@ body {
     max-width: none;
   }
 
-  /* Override collapsed when mobile menu is open */
+  /* Override hidden when mobile menu is open */
   .sidebar.mobile-open {
     transform: translateX(0);
     max-width: 360px;
@@ -1044,8 +1062,22 @@ body {
     margin-left: 0;
   }
 
+  .main-wrapper .logo {
+    margin-left: 5rem;
+  }
+
   .hamburger {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 10px;
+  }
+
+  .hamburger svg {
+    width: 28px;
+    height: 28px;
   }
 
   .screen {
@@ -1132,6 +1164,10 @@ body {
     margin-left: 0;
     width: 100%;
     margin-top: 3.5rem;
+  }
+
+  .main-wrapper .logo {
+    margin-left: 0;
   }
 
   .main-wrapper.sidebar-collapsed {
@@ -1250,21 +1286,23 @@ body {
     align-items: flex-start;
   }
 
-  /* Hamburger repositioned */
+  /* Hamburger — bigger touch target on mobile */
   .hamburger {
     top: 16px;
     left: 16px;
+    width: 48px;
+    height: 48px;
+    padding: 10px;
+  }
+
+  .hamburger svg {
+    width: 28px;
+    height: 28px;
   }
 
   /* Hide sidebar-show-btn on mobile — hamburger handles it */
   .sidebar-show-btn {
     display: none !important;
-  }
-
-  /* Sidebar show button */
-  .sidebar-show-btn {
-    top: 16px;
-    left: 16px;
   }
 
   /* Body area */
