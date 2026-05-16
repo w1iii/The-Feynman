@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '../../../lib/supabase/server'
 
-import { z } from 'zod';
-
 export async function POST(request: NextRequest) {
-  const { email, password } = await request.json()
+  const { email, password, redirectTo } = await request.json()
 
   if (!email || !password) {
     return NextResponse.json(
@@ -40,6 +38,9 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: redirectTo,
+    },
   })
 
   if (error) {

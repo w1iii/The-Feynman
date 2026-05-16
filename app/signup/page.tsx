@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { createClient } from "../lib/supabase/client";
 import Link from "next/link";
 import "./page.css";
 
@@ -11,23 +10,26 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const supabase = createClient();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
-      },
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password,
+        redirectTo: `${window.location.origin}/api/auth/callback`,
+      }),
     });
 
-    if (error) {
-      setError(error.message);
+    const data = await response.json();
+
+    if (!response.ok) {
+      setError(data.error);
       setLoading(false);
     } else {
       setSuccess(true);
