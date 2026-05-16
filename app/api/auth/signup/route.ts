@@ -66,9 +66,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const autoConfirmed = !!data.session
+
   return NextResponse.json({
     user: data.user,
     session: data.session,
-    message: 'Check your email for confirmation link',
+    autoConfirmed,
+    message: autoConfirmed
+      ? 'Account created successfully'
+      : 'Check your email for confirmation link',
   })
 }

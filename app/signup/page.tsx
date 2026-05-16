@@ -1,10 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import "./page.css";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,6 +33,9 @@ export default function SignupPage() {
     if (!response.ok) {
       setError(data.error);
       setLoading(false);
+    } else if (data.autoConfirmed) {
+      // User is signed in immediately (email confirmation is disabled)
+      router.push("/feynman");
     } else {
       setSuccess(true);
     }
