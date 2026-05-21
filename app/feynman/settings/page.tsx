@@ -366,6 +366,21 @@ export default function SettingsPage() {
             </div>
           </section>
 
+          { /* Billing Section */ }
+          <section className="billing-section">
+            <h2 className="settings-section-title"> Billing </h2>
+            {
+              statsLoading ? (
+              <div className="settings-card loading">
+                <div className="loading-spinner"></div>
+                <span>Loading billing...</span>
+              </div>
+            ) :(
+              <p> billing section </p>
+            )
+            }
+          </section>
+
           {/* Stats Section */}
           <section className="settings-section">
             <h2 className="settings-section-title">Learning Stats</h2>
