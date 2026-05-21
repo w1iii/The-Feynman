@@ -58,11 +58,12 @@ export default function SettingsPage() {
     try {
       const supabase = createClient();
 
-      // Fire all requests in parallel
+      // Fire all requests in parallel (include billing)
       const [userResult, profileRes, statsRes, billingRes, sessionsRes] = await Promise.all([
         supabase.auth.getUser(),
         fetch("/api/profile"),
         fetch("/api/stats"),
+        fetch("/api/billing"),
         fetch("/api/getsession"),
       ]);
 
@@ -87,10 +88,9 @@ export default function SettingsPage() {
       }
 
       // Handle billing
-      if (statsRes.ok) {
+      if (billingRes && billingRes.ok) {
         const billingData = await billingRes.json();
         setBilling(billingData);
-        setBillingLoading(false);
       }
       setBillingLoading(false);
 
