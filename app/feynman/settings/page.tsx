@@ -27,10 +27,15 @@ type Stats = {
   recent_concepts: string[];
 };
 
+type Billing = {
+  total_sessions: number;
+};
+
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [billing, setBilling] = useState<Billing | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sessions, setSessions] = useState<Array<{ id: string; concept: string; created_at: string; status: string }>>([]);
@@ -43,6 +48,7 @@ export default function SettingsPage() {
 
   // Stats loading
   const [statsLoading, setStatsLoading] = useState(true);
+  const [billingLoading, setBillingLoading] = useState(true);
 
   useEffect(() => {
     fetchUserData();
@@ -53,7 +59,7 @@ export default function SettingsPage() {
       const supabase = createClient();
 
       // Fire all requests in parallel
-      const [userResult, profileRes, statsRes, sessionsRes] = await Promise.all([
+      const [userResult, profileRes, statsRes, billingRes, sessionsRes] = await Promise.all([
         supabase.auth.getUser(),
         fetch("/api/profile"),
         fetch("/api/stats"),
@@ -64,6 +70,7 @@ export default function SettingsPage() {
 
       if (authError || !user) {
         setStatsLoading(false);
+        setBillingLoading(false);
         return;
       }
 
@@ -78,6 +85,14 @@ export default function SettingsPage() {
           display_name: profileData.display_name || "",
         });
       }
+
+      // Handle billing
+      if (statsRes.ok) {
+        const billingData = await billingRes.json();
+        setBilling(billingData);
+        setBillingLoading(false);
+      }
+      setBillingLoading(false);
 
       // Handle stats
       if (statsRes.ok) {
@@ -94,6 +109,7 @@ export default function SettingsPage() {
     } catch (err) {
       console.log("Error fetching user:", err);
       setStatsLoading(false);
+      setBillingLoading(false);
     }
   };
 
