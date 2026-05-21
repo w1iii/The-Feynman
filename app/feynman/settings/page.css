@@ -245,6 +245,16 @@
   color: #6c757d;
 }
 
+/* Billing card styles */
+.billing-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.billing-row { display:flex; gap:18px; align-items:center }
+.billing-title { font-size: 13px; color: #6b7280; margin-bottom:6px }
+.billing-actions { display:flex; gap:8px }
+
 /* Settings link */
 .settings-link {
   color: var(--green);

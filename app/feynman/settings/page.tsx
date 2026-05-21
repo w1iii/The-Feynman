@@ -386,14 +386,49 @@ export default function SettingsPage() {
           <section className="billing-section">
             <h2 className="settings-section-title"> Billing </h2>
             {
-              statsLoading ? (
-              <div className="settings-card loading">
-                <div className="loading-spinner"></div>
-                <span>Loading billing...</span>
-              </div>
-            ) :(
-              <p> billing section </p>
-            )
+              billingLoading ? (
+                <div className="settings-card loading">
+                  <div className="loading-spinner"></div>
+                  <span>Loading billing...</span>
+                </div>
+              ) : (
+                <div className="settings-card billing-card">
+                  <div className="billing-row">
+                    <div>
+                      <div className="billing-title">Plan</div>
+                      <div className={`settings-value plan-badge ${profile?.plan === "free" ? "free" : ""}`}>{profile?.plan || 'Free'}</div>
+                    </div>
+                    <div className="billing-actions">
+                      {profile?.plan === 'free' ? (
+                        <button className="settings-btn primary" onClick={async () => {
+                          // Kick off checkout flow
+                          try {
+                            const res = await fetch('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID }) })
+                            const data = await res.json()
+                            if (data.url) window.location.href = data.url
+                            else alert(data.error || 'Failed to create checkout')
+                          } catch (err) {
+                            alert('Failed to start checkout')
+                          }
+                        }}>Upgrade</button>
+                      ) : (
+                        <button className="settings-btn" onClick={async () => {
+                          // Open customer portal - requires customer id which we don't have in client yet
+                          try {
+                            // Server may determine customer based on auth
+                            const res = await fetch('/api/billing/portal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+                            const data = await res.json()
+                            if (data.url) window.location.href = data.url
+                            else alert(data.error || 'Failed to open billing portal')
+                          } catch (err) {
+                            alert('Failed to open billing portal')
+                          }
+                        }}>Manage Subscription</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
             }
           </section>
 
