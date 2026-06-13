@@ -20,11 +20,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(cached)
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('plan')
-    .eq('user_id', user.id)
-    .single()
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single()
 
   if (profileError) {
     console.log('Profile fetch error:', profileError)

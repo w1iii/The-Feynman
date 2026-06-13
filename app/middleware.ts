@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 const publicRoutes = ['/', '/signup', '/login']
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  const supabaseResponse = NextResponse.next({ request })
   
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,8 +49,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user is authenticated and trying to access public auth pages, redirect to protected area
-  if (user && (currentPath === '/' || currentPath === '/signup')) {
-    return NextResponse.redirect(new URL('/test', request.url))
+  if (user && (currentPath === '/' || currentPath === '/signup' || currentPath === '/login')) {
+    return NextResponse.redirect(new URL('/feynman', request.url))
   }
 
   return supabaseResponse

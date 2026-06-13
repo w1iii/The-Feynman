@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('stripe_customer_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError) {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ stripe_customer_id: customerId })
-        .eq('user_id', user.id)
+        .eq('id', user.id)
 
       if (updateError) console.error('Failed to persist stripe_customer_id', updateError)
     }
