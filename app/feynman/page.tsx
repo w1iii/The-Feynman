@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { createClient } from "../lib/supabase/client";
 import "./page.css";
 
@@ -89,7 +89,7 @@ export default function FeynmanPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [coachingDone, setCoachingDone] = useState(false);
   const [finalSubmitted, setFinalSubmitted] = useState(false);
-  const [score, setScore] = useState<{ score: number; label: string; description: string; strengths: string[] } | null>(null);
+  const [, startTransition] = useTransition();
   const [charCount, setCharCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
@@ -149,23 +149,6 @@ export default function FeynmanPage() {
     }
   };
 
-  // ── handle ?session= URL param on mount ──
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionIdParam = params.get("session");
-    if (sessionIdParam) {
-      // Clear URL param without reload
-      window.history.replaceState({}, "", "/feynman");
-      loadSession(sessionIdParam);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    fetchUserData();
-  }, []);
-
   // ── load a past session ──
   const loadSession = async (sessionId: string) => {
     setIsLoading(true);
@@ -212,26 +195,16 @@ export default function FeynmanPage() {
         setIsReviewMode(true);
         setStage(5);
         
-        // Show score
-        if (session.final_score !== null) {
-          setScore({
+        // Add score message
+        setMessages(prev => [...prev, {
+          role: 'ai' as const,
+          content: `__SCORE__${JSON.stringify({
             score: session.final_score,
-            label: session.score_label || "Completed",
-            description: session.score_description || "",
+            label: session.score_label,
+            description: session.score_description,
             strengths: [],
-          });
-          
-          // Add score message
-          setMessages(prev => [...prev, {
-            role: 'ai' as const,
-            content: `__SCORE__${JSON.stringify({
-              score: session.final_score,
-              label: session.score_label,
-              description: session.score_description,
-              strengths: [],
-            })}`,
-          }]);
-        }
+          })}`,
+        }]);
       } else {
         setStage(2);
         setIsReviewMode(false);
@@ -253,6 +226,22 @@ export default function FeynmanPage() {
       setIsLoading(false);
     }
   };
+
+  // ── handle ?session= URL param on mount ──
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionIdParam = params.get("session");
+    if (sessionIdParam) {
+      window.history.replaceState({}, "", "/feynman");
+      startTransition(() => { loadSession(sessionIdParam); });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    fetchUserData();
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -287,11 +276,10 @@ export default function FeynmanPage() {
         setConceptConfirmed(false)
         setCoachingDone(false)
         setFinalSubmitted(false)
-        setScore(null)
         setPassed([])
         setIsReviewMode(false)
       }
-    } catch (err) {
+    } catch {
       setError("Failed to delete session");
     }
   };
@@ -383,7 +371,6 @@ export default function FeynmanPage() {
         body: JSON.stringify({ concept, finalExplanation: trimmed }),
       });
       const data = await res.json();
-      setScore(data);
       setStage(5);
 
       // show score as AI message
@@ -468,7 +455,6 @@ export default function FeynmanPage() {
     setIsLoading(false);
     setCoachingDone(false);
     setFinalSubmitted(false);
-    setScore(null);
     setIsReviewMode(false);
     setError(null);
   };

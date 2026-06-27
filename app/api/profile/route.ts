@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '../../lib/supabase/server'
+import { requireUser } from '../../lib/supabase/auth-helper'
 import { getCached, setCached, CacheKeys, CacheTTLs, invalidateCache } from '../../lib/redis/cache'
 
-export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    )
-  }
+export async function GET(_request: NextRequest) {
+  const { user, supabase, error } = await requireUser()
+  if (error) return error
 
   const cacheKey = CacheKeys.profile(user.id)
   const cached = await getCached(cacheKey)
@@ -27,7 +19,7 @@ export async function GET(request: NextRequest) {
       .single()
 
   if (profileError) {
-    console.log('Profile fetch error:', profileError)
+    console.error('Profile fetch error:', profileError)
     return NextResponse.json(
       { error: profileError.message },
       { status: 500 }
@@ -45,16 +37,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const supabase = await createClient()
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    )
-  }
+  const { user, supabase, error } = await requireUser()
+  if (error) return error
 
   const body = await request.json()
   const { display_name } = body

@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '../../../lib/supabase/server'
+import { requireUser } from '../../../lib/supabase/auth-helper'
 import { invalidateUserSessionsAndStats } from '../../../lib/redis/cache'
 
 export async function DELETE(
@@ -10,17 +10,8 @@ export async function DELETE(
 
   const { id: sessionIdToDelete } = await params
 
-  const supabase = await createClient()
-
-  // Get authenticated user
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    )
-  }
+  const { user, supabase, error } = await requireUser()
+  if (error) return error
 
   // Fetch session and verify ownership
   const { data: session, error: sessionError } = await supabase
@@ -58,12 +49,12 @@ export async function DELETE(
   }
 
   // Delete the session
-  const { error } = await supabase
+  const { error: deleteError } = await supabase
     .from('sessions')
     .delete()
     .eq('id', sessionIdToDelete)
 
-  if (error) {
+  if (deleteError) {
     return NextResponse.json(
       { error: 'Failed to delete session.' },
       { status: 500 }

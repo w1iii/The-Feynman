@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
   )
 
   // Get the current user
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   // Check if the route is protected
   const currentPath = request.nextUrl.pathname

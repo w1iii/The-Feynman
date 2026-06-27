@@ -169,7 +169,7 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer>
         <span className="footer-copy">
-          &copy; 2024 Feynman Learning. Built for the intellectually curious.
+          &copy; {new Date().getFullYear()} Feynman Learning. Built for the intellectually curious.
         </span>
         <div className="footer-links">
           <Link href="/login" className="footer-link">Sign In</Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { createClient } from "../../lib/supabase/client";
 import "./page.css";
 
@@ -35,7 +35,8 @@ export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [billing, setBilling] = useState<Billing | null>(null);
+  const [_billing, setBilling] = useState<Billing | null>(null);
+  const [, startTransition] = useTransition();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sessions, setSessions] = useState<Array<{ id: string; concept: string; created_at: string; status: string }>>([]);
@@ -49,10 +50,6 @@ export default function SettingsPage() {
   // Stats loading
   const [statsLoading, setStatsLoading] = useState(true);
   const [billingLoading, setBillingLoading] = useState(true);
-
-  useEffect(() => {
-    fetchUserData();
-  }, []);
 
   const fetchUserData = async () => {
     try {
@@ -112,6 +109,10 @@ export default function SettingsPage() {
       setBillingLoading(false);
     }
   };
+
+  useEffect(() => {
+    startTransition(() => { fetchUserData(); });
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -183,7 +184,7 @@ export default function SettingsPage() {
   };
 
   const loadSession = (sessionId: string) => {
-    window.location.href = `/feynman?session=${sessionId}`;
+    window.location.assign(`/feynman?session=${sessionId}`);
   };
 
   const deleteSession = async (sessionIdToDelete: string) => {
@@ -407,7 +408,7 @@ export default function SettingsPage() {
                             const data = await res.json()
                             if (data.url) window.location.href = data.url
                             else alert(data.error || 'Failed to create checkout')
-                          } catch (err) {
+                          } catch {
                             alert('Failed to start checkout')
                           }
                         }}>Upgrade</button>
@@ -420,7 +421,7 @@ export default function SettingsPage() {
                             const data = await res.json()
                             if (data.url) window.location.href = data.url
                             else alert(data.error || 'Failed to open billing portal')
-                          } catch (err) {
+                          } catch {
                             alert('Failed to open billing portal')
                           }
                         }}>Manage Subscription</button>

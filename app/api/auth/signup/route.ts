@@ -11,18 +11,11 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  try{
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if(!emailRegex.test(email)){
-      return NextResponse.json(
-        { error: 'Email is not valid' },
-        { status: 400 }
-      )
-    }
-  }catch{
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
     return NextResponse.json(
       { error: 'Email is not valid' },
-      { status: 403 }
+      { status: 400 }
     )
   }
 

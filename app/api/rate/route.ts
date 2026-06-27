@@ -1,7 +1,6 @@
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "../../lib/supabase/server";
-import { invalidateUserSessionsAndStats } from "../../lib/redis/cache";
 
 export async function POST(req: Request) {
   try {
@@ -67,9 +66,10 @@ export async function POST(req: Request) {
         max_tokens: 300,
         temperature: 0.3,
       });
-    } catch (primaryError: any) {
+    } catch (primaryError: unknown) {
       // Check for rate limit (429) error
-      if (primaryError?.status === 429 || primaryError?.message?.includes('rate_limit')) {
+      const err = primaryError as { status?: number; message?: string }
+      if (err?.status === 429 || err?.message?.includes('rate_limit')) {
         console.warn("Primary model rate limited, falling back to llama-3.1-8b-instant");
         
         response = await client.chat.completions.create({
@@ -102,9 +102,6 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
-
-    // Ensure parsed has defaults
-    parsed = parsed || { score: 50, label: "Good grasp", description: "Thank you for your submission.", strengths: ["Attempted explanation"] };
 
     return NextResponse.json({
       score: parsed.score,

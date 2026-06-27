@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
-import { createClient } from "../../lib/supabase/server";
+import { requireUser } from "../../lib/supabase/auth-helper";
 import { invalidateUserSessionsAndStats } from "../../lib/redis/cache";
 
 type Message = {
@@ -21,12 +21,8 @@ export async function POST(req: Request) {
     }
 
     // Get authenticated user and verify session ownership
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { user, supabase, error } = await requireUser();
+    if (error) return error
 
     // Verify session belongs to user
     const { data: session, error: sessionError } = await supabase
@@ -75,7 +71,6 @@ export async function POST(req: Request) {
     `;
 
     let response;
-    let usedFallback = false;
 
     try {
       // Try primary model first
@@ -88,11 +83,11 @@ export async function POST(req: Request) {
         max_tokens: 300,
         temperature: 0.4,
       });
-    } catch (primaryError: any) {
+    } catch (primaryError: unknown) {
       // Check for rate limit (429) error
-      if (primaryError?.status === 429 || primaryError?.message?.includes('rate_limit')) {
+      const err = primaryError as { status?: number; message?: string }
+      if (err?.status === 429 || err?.message?.includes('rate_limit')) {
         console.warn("Primary model rate limited, falling back to llama-3.1-8b-instant");
-        usedFallback = true;
         
         response = await client.chat.completions.create({
           model: "llama-3.1-8b-instant",
@@ -121,9 +116,6 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
-
-    // Ensure parsed has defaults
-    parsed = parsed || { done: false, passed: [], question: "Could you tell me more about that?" };
 
     // Save messages to database on every turn
     // First, delete existing messages for this session to avoid conflicts

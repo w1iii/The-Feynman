@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '../../lib/supabase/server'
+import { requireUser } from '../../lib/supabase/auth-helper'
 import { invalidateUserSessionsAndStats } from '../../lib/redis/cache'
 
 export async function POST(request: NextRequest) {
@@ -12,17 +12,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const supabase = await createClient()
-
-  // Get current user from auth
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    )
-  }
+  const { user, supabase, error } = await requireUser()
+  if (error) return error
 
   // Check user's profile plan
   const { data: profile } = await supabase
@@ -53,7 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Create session
-  const { data, error } = await supabase
+  const { data, error: sessionError } = await supabase
     .from('sessions')
     .insert({
       user_id: user.id,
@@ -64,38 +55,41 @@ export async function POST(request: NextRequest) {
     .select('id')
     .single()
 
-  if (error) {
+  if (sessionError) {
     return NextResponse.json(
-      { error: error.message },
+      { error: sessionError.message },
       { status: 500 }
     )
   }
 
-  // Increment daily usage only for non-premium users
+  // Increment daily usage atomically for non-premium users
   if (!isPremium) {
-    const today = new Date().toISOString().split('T')[0]
-    
-    const { data: usage } = await supabase
-      .from('daily_usage')
-      .select('sessions_used')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single()
+    const { error: rpcError } = await supabase.rpc('increment_daily_usage', {
+      p_user_id: user.id,
+    })
 
-    if (usage) {
-      await supabase
+    if (rpcError) {
+      // Fallback if RPC function doesn't exist yet
+      console.error('RPC increment_daily_usage failed, using fallback:', rpcError)
+      const today = new Date().toISOString().split('T')[0]
+      const { data: usage } = await supabase
         .from('daily_usage')
-        .update({ sessions_used: usage.sessions_used + 1 })
+        .select('sessions_used')
         .eq('user_id', user.id)
         .eq('date', today)
-    } else {
-      await supabase
-        .from('daily_usage')
-        .insert({
-          user_id: user.id,
-          date: today,
-          sessions_used: 1,
-        })
+        .single()
+
+      if (usage) {
+        await supabase
+          .from('daily_usage')
+          .update({ sessions_used: usage.sessions_used + 1 })
+          .eq('user_id', user.id)
+          .eq('date', today)
+      } else {
+        await supabase
+          .from('daily_usage')
+          .insert({ user_id: user.id, date: today, sessions_used: 1 })
+      }
     }
   }
 
