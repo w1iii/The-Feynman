@@ -1,10 +1,13 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { requireEnv } from '../env'
 export function createClient() {
-  return createBrowserClient(
-    requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) {
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    // Return a dummy client; actual auth calls will fail gracefully
+    return createBrowserClient(url || '', key || '')
+  }
+  return createBrowserClient(url, key)
 }
 
 
