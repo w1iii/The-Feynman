@@ -11,9 +11,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { concept, finalExplanation }: { 
+    const { concept, finalExplanation, session_id }: { 
       concept: string; 
-      finalExplanation: string 
+      finalExplanation: string;
+      session_id?: string;
     } = await req.json();
 
     if (!concept || !finalExplanation) {
@@ -101,6 +102,18 @@ export async function POST(req: Request) {
         { error: "Failed to parse AI response. Please try again." },
         { status: 500 }
       );
+    }
+
+    // Persist score to sessions table
+    if (session_id) {
+      await supabase
+        .from('sessions')
+        .update({
+          final_score: parsed.score,
+          score_label: parsed.label,
+          score_description: parsed.description,
+        })
+        .eq('id', session_id);
     }
 
     return NextResponse.json({

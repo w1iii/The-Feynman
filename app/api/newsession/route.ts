@@ -22,10 +22,10 @@ export async function POST(request: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  const isPremium = profile?.plan === 'premium'
+  const isPro = profile?.plan === 'pro'
 
-  // Check daily usage limit only for non-premium users
-  if (!isPremium) {
+  // Check daily usage limit only for non-pro users
+  if (!isPro) {
     const today = new Date().toISOString().split('T')[0]
     
     const { data: usage } = await supabase
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Increment daily usage atomically for non-premium users
-  if (!isPremium) {
+  // Increment daily usage atomically for non-pro users
+  if (!isPro) {
     const { error: rpcError } = await supabase.rpc('increment_daily_usage', {
       p_user_id: user.id,
     })

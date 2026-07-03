@@ -368,7 +368,7 @@ export default function FeynmanPage() {
       const res = await fetch("/api/rate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ concept, finalExplanation: trimmed }),
+        body: JSON.stringify({ concept, finalExplanation: trimmed, session_id: sessionId }),
       });
       const data = await res.json();
       setStage(5);
