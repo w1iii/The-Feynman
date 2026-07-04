@@ -29,12 +29,6 @@ type Profile = {
   plan: string;
 };
 
-// dot stages:
-// 1 = entered concept
-// 2 = coaching in progress
-// 3 = all criteria met / coaching done
-// 4 = final explanation written
-// 5 = rated / complete
 type Stage = 1 | 2 | 3 | 4 | 5;
 
 function formatDate(dateStr: string) {
@@ -52,15 +46,6 @@ function formatDate(dateStr: string) {
   });
 }
 
-function getInitials(name: string | undefined, email: string) {
-  if (name) {
-    const parts = name.split(" ");
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  }
-  return email.slice(0, 2).toUpperCase();
-}
-
 const CRITERIA_LABELS = [
   "Plain language",
   "Core mechanism",
@@ -73,11 +58,9 @@ export default function FeynmanPage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const initialized = useRef(false);
 
-  // ── conversation state ──
   const [concept, setConcept] = useState("");
   const [conceptConfirmed, setConceptConfirmed] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -93,18 +76,15 @@ export default function FeynmanPage() {
   const [charCount, setCharCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scoreSectionRef = useRef<HTMLDivElement>(null);
 
-  // ── scroll to bottom on new message ──
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // ── smooth scroll to score section when it appears ──
   useEffect(() => {
     const hasScore = messages.some(m => m.role === "ai" && m.content.startsWith("__SCORE__"));
     if (hasScore && scoreSectionRef.current) {
@@ -117,29 +97,20 @@ export default function FeynmanPage() {
   const fetchUserData = async () => {
     try {
       const supabase = createClient();
-
-      // Fire all three requests in parallel
       const [userResult, profileRes, sessionsRes] = await Promise.all([
         supabase.auth.getUser(),
         fetch("/api/profile"),
         fetch("/api/getsession"),
       ]);
-
       const { data: { user }, error: authError } = userResult;
-
       if (authError || !user) return;
-
       setUser(user as User);
-
-      // Handle profile
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         setProfile({ plan: profileData.plan || "free" });
       } else {
         setProfile({ plan: "free" });
       }
-
-      // Handle sessions
       if (sessionsRes.ok) {
         const sessionsData = await sessionsRes.json();
         if (sessionsData.sessions) setSessions(sessionsData.sessions as Session[]);
@@ -149,53 +120,39 @@ export default function FeynmanPage() {
     }
   };
 
-  // ── load a past session ──
   const loadSession = async (sessionId: string) => {
     setIsLoading(true);
     setError(null);
     setMobileMenuOpen(false);
-
     try {
       const res = await fetch(`/api/session/${sessionId}`);
-      
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || "Failed to load session");
       }
-
       const data = await res.json();
       const { session, messages, criteria_results } = data;
-
-      // Convert messages to display format
       const displayMessages = messages.map((m: { role: string; content: string }) => ({
         role: m.role === 'assistant' ? 'ai' : 'user' as const,
         content: m.content,
       }));
-
-      // Get passed criteria indices
       const passedIndices = criteria_results
         .filter((c: { passed: boolean }) => c.passed)
         .map((c: { criterion_index: number }) => c.criterion_index);
-
-      // Build apiMessages from database messages for continuing conversation
       const loadedApiMessages = messages.map((m: { role: string; content: string }) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
       }));
-
       setSessionId(session.id);
       setConcept(session.concept);
       setMessages(displayMessages);
       setApiMessages(loadedApiMessages);
       setPassed(passedIndices);
       setConceptConfirmed(true);
-
       if (session.status === 'completed' && session.final_score !== null) {
         setCoachingDone(true);
         setIsReviewMode(true);
         setStage(5);
-        
-        // Add score message
         setMessages(prev => [...prev, {
           role: 'ai' as const,
           content: `__SCORE__${JSON.stringify({
@@ -208,14 +165,10 @@ export default function FeynmanPage() {
       } else {
         setStage(2);
         setIsReviewMode(false);
-        
-        // Check if all criteria met - coaching is done but still needs final explanation
         const allCriteriaMet = passedIndices.length === 5;
         if (allCriteriaMet) {
           setCoachingDone(true);
-          // Ask for final explanation
-          const finalPrompt = `Now write your best, complete explanation of ${session.concept}. Put everything together — no notes, just you.`;
-          setMessages(prev => [...prev, { role: 'ai', content: finalPrompt }]);
+          setMessages(prev => [...prev, { role: 'ai', content: `Now write your best, complete explanation of ${session.concept}. Put everything together — no notes, just you.` }]);
         } else {
           setCoachingDone(false);
         }
@@ -227,7 +180,6 @@ export default function FeynmanPage() {
     }
   };
 
-  // ── handle ?session= URL param on mount ──
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionIdParam = params.get("session");
@@ -249,75 +201,64 @@ export default function FeynmanPage() {
     window.location.href = "/";
   };
 
-  // ── delete session ──
   const deleteSession = async (sessionIdToDelete: string) => {
     try {
       const res = await fetch(`/api/deletesession/${sessionIdToDelete}`, {
         method: 'DELETE'
-      })
-
-      if(!res.ok){
+      });
+      if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || "Failed to delete session");
       }
-
-      // Remove deleted session from state
-      setSessions(prevSessions => 
+      setSessions(prevSessions =>
         prevSessions.filter(session => session.id !== sessionIdToDelete)
-      )
-
-      // If the deleted session was the active one, reset the view
+      );
       if (sessionId === sessionIdToDelete) {
-        setSessionId(null)
-        setMessages([])
-        setApiMessages([])
-        setStage(1)
-        setConcept('')
-        setConceptConfirmed(false)
-        setCoachingDone(false)
-        setFinalSubmitted(false)
-        setPassed([])
-        setIsReviewMode(false)
+        setSessionId(null);
+        setMessages([]);
+        setApiMessages([]);
+        setStage(1);
+        setConcept('');
+        setConceptConfirmed(false);
+        setCoachingDone(false);
+        setFinalSubmitted(false);
+        setPassed([]);
+        setIsReviewMode(false);
       }
     } catch {
       setError("Failed to delete session");
     }
   };
 
-  // ── submit concept (first input) ──
   const handleConceptSubmit = async () => {
     const trimmed = input.trim();
     if (!trimmed || trimmed.length < 3) return;
-
     setIsLoading(true);
     setError(null);
-
     try {
-      // Create session first
       const sessionRes = await fetch("/api/newsession", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ concept: trimmed }),
       });
-
       if (!sessionRes.ok) {
         const errData = await sessionRes.json();
-        throw new Error(errData.error || "Failed to create session");
+        if (sessionRes.status === 403 && errData.upgrade) {
+          setError("Daily limit reached. Upgrade to Pro for unlimited sessions.");
+        } else {
+          throw new Error(errData.error || "Failed to create session");
+        }
+        setIsLoading(false);
+        return;
       }
-
       const sessionData = await sessionRes.json();
       setSessionId(sessionData.id);
-
       setConcept(trimmed);
       setConceptConfirmed(true);
       setInput("");
       setCharCount(0);
       setStage(2);
-
-      // show user's concept as first message
       setMessages([{ role: "user", content: trimmed }]);
-
-      // auto-call coach with opening prompt
       const opening = { role: "user" as const, content: `I want to explain: ${trimmed}` };
       const history = [opening];
       setApiMessages(history);
@@ -331,17 +272,13 @@ export default function FeynmanPage() {
     }
   };
 
-  // ── submit explanation during coaching ──
   const handleExplanationSubmit = async () => {
     const trimmed = input.trim();
     if (!trimmed || isLoading) return;
-
     const userMsg: Message = { role: "user", content: trimmed };
     setMessages((prev) => [...prev, userMsg]);
-
     const newApiMessages = [...apiMessages, { role: "user" as const, content: trimmed }];
     setApiMessages(newApiMessages);
-
     setInput("");
     setCharCount(0);
     if (sessionId) {
@@ -349,21 +286,17 @@ export default function FeynmanPage() {
     }
   };
 
-  // ── submit final explanation ──
   const handleFinalSubmit = async () => {
     const trimmed = input.trim();
     if (!trimmed || isLoading) return;
-
     const words = trimmed.split(/\s+/).length;
     if (words < 30) return;
-
     setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
     setInput("");
     setCharCount(0);
     setFinalSubmitted(true);
     setIsLoading(true);
     setStage(4);
-
     try {
       const res = await fetch("/api/rate", {
         method: "POST",
@@ -372,8 +305,6 @@ export default function FeynmanPage() {
       });
       const data = await res.json();
       setStage(5);
-
-      // show score as AI message
       setMessages((prev) => [
         ...prev,
         {
@@ -389,7 +320,6 @@ export default function FeynmanPage() {
     }
   };
 
-  // ── coach API call ──
   const callCoach = async (
     conceptStr: string,
     history: { role: "user" | "assistant"; content: string }[],
@@ -402,34 +332,24 @@ export default function FeynmanPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: history, concept: conceptStr, session_id: currentSessionId }),
       });
-      
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || "Failed to get response");
       }
-      
       const data = await res.json();
-
       setPassed(data.passed ?? []);
-
       if (data.done) {
         setCoachingDone(true);
         setStage(3);
-
-        // show praise
         if (data.praise) {
           setMessages((prev) => [...prev, { role: "ai", content: data.praise }]);
           setApiMessages((prev) => [...prev, { role: "assistant", content: data.praise }]);
         }
-
-        // show gaps if any, then ask for final explanation
         const gapNote = data.gaps?.length
           ? `\n\nFor your final explanation, make sure to address: ${data.gaps.join(", ")}.`
           : "";
-
         const finalPrompt = `Now write your best, complete explanation of ${conceptStr}. Put everything together — no notes, just you.${gapNote}`;
         setMessages((prev) => [...prev, { role: "ai", content: finalPrompt }]);
-
       } else {
         setMessages((prev) => [...prev, { role: "ai", content: data.question }]);
         setApiMessages((prev) => [...prev, { role: "assistant", content: data.question }]);
@@ -441,7 +361,6 @@ export default function FeynmanPage() {
     }
   };
 
-  // ── new session ──
   const resetSession = () => {
     setConcept("");
     setConceptConfirmed(false);
@@ -459,13 +378,15 @@ export default function FeynmanPage() {
     setError(null);
   };
 
-  // ── input handler ──
   const handleInputChange = (val: string) => {
     setInput(val);
     setCharCount(val.length);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
   };
 
-  // ── what submit does depends on stage ──
   const handleSubmit = () => {
     if (!conceptConfirmed) {
       handleConceptSubmit();
@@ -495,286 +416,279 @@ export default function FeynmanPage() {
     ? "Write your final, complete explanation… (min 30 words)"
     : "Write your explanation…";
 
+  const isWritingWell = !conceptConfirmed && messages.length === 0 && !error;
+
   return (
-    <div className="app-layout" style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      {/* Mobile Hamburger */}
-      <button className="hamburger" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M3 12h18M3 6h18M3 18h18" />
-        </svg>
-      </button>
-
-      <button
-        className={`sidebar-show-btn ${sidebarCollapsed ? "visible" : ""}`}
-        onClick={() => setSidebarCollapsed(false)}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-      </button>
-
-      <div className={`sidebar-overlay ${mobileMenuOpen ? "visible" : ""}`} onClick={() => setMobileMenuOpen(false)} />
+    <div className="flex h-screen w-full bg-background text-on-background overflow-hidden selection:bg-primary/10 selection:text-primary">
+      {/* Mobile overlay */}
+      <div
+        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
 
       {/* Sidebar */}
-      <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileMenuOpen ? "mobile-open" : ""}`}>
-        <div className="sidebar-header">
-          <button className="sidebar-toggle" onClick={() => { setSidebarCollapsed(true); setMobileMenuOpen(false); }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="profile-section">
-          <div className="profile-info">
-            <div className="profile-avatar">
-              {user ? getInitials(user.user_metadata?.full_name, user.email) : "?"}
-            </div>
-            <div className="profile-details">
-              <div className="profile-name">{user?.user_metadata?.full_name || "User"}</div>
-              <div className="profile-email">{user?.email || "No email"}</div>
-              <span className={`profile-plan ${profile?.plan === "free" ? "free" : ""}`}>
-                {profile?.plan || "Free"} Plan
-              </span>
+      <aside className="fixed left-0 top-0 h-full w-[280px] flex flex-col py-12 z-50 bg-transparent border-r border-outline-variant/20">
+        {/* Profile */}
+        <div className="px-8 mb-12">
+          <div className="flex flex-col gap-1">
+            <span className="text-[20px] font-display italic text-primary leading-tight">
+              {user?.user_metadata?.full_name || "User"}
+            </span>
+            <span className="text-[11px] font-body text-on-surface-variant/60 tracking-wider">
+              {user?.email || ""}
+            </span>
+            <div className="mt-4 px-3 py-1 inline-block border border-outline-variant/30 rounded-full text-[9px] font-bold tracking-widest text-on-surface-variant/50 w-fit uppercase">
+              {profile?.plan || "FREE"} PLAN
             </div>
           </div>
         </div>
 
-        <div className="new-session-section">
-          <button className="new-session-btn" onClick={() => { resetSession(); setMobileMenuOpen(false); }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            New Session
+        {/* New Session */}
+        <div className="px-8 mb-12">
+          <button
+            onClick={() => { resetSession(); setMobileMenuOpen(false); }}
+            className="flex items-center gap-3 text-primary font-body text-[11px] tracking-[0.2em] uppercase group transition-all duration-300"
+          >
+            <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform duration-500">add</span>
+            <span className="border-b border-primary/20 group-hover:border-primary pb-1">NEW SESSION</span>
           </button>
         </div>
 
-        <div className="history-section">
-          <div className="history-header">History</div>
-          <div className="history-list">
-            {sessions.length === 0 ? (
-              <div className="history-empty">No sessions yet</div>
-            ) : (
-              sessions.map((session) => (
-                <div key={session.id} className="history-item" onClick={() => loadSession(session.id)}>
-                  <div className="history-item-content">
-                    <span className="history-concept">{session.concept}</span>
-                    <span className="history-date">{formatDate(session.created_at)}</span>
-                  </div>
-                  <button 
-                    className="history-delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteSession(session.id);
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
+        {/* History */}
+        <nav className="flex-grow overflow-y-auto custom-scrollbar px-0">
+          <div className="px-8 mb-6 font-body text-[10px] text-outline-variant/60 uppercase tracking-[0.2em]">
+            History
+          </div>
+          {sessions.length === 0 ? (
+            <div className="px-8 font-body text-[13px] text-on-surface-variant/40 italic">
+              No sessions yet
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <div
+                key={session.id}
+                onClick={() => loadSession(session.id)}
+                className="group flex items-center justify-between text-on-surface-variant/70 font-body text-[14px] px-8 py-3 hover:text-primary transition-colors duration-300 cursor-pointer"
+              >
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="truncate">{session.concept}</span>
+                  <span className="text-[11px] text-on-surface-variant/40">{formatDate(session.created_at)}</span>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                  className="opacity-0 group-hover:opacity-100 text-on-surface-variant/40 hover:text-error transition-all duration-200 flex-shrink-0 ml-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+              </div>
+            ))
+          )}
+        </nav>
 
-        <div className="sidebar-footer">
-          <a href="/feynman/settings" className="sidebar-link">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-            Settings
+        {/* Footer */}
+        <div className="mt-auto pt-6 px-8 flex flex-col gap-4">
+          <a
+            href="/feynman/settings"
+            className="flex items-center gap-3 text-on-surface-variant/50 font-body text-[10px] uppercase tracking-widest hover:text-primary transition-colors duration-200"
+          >
+            <span className="material-symbols-outlined text-[18px]">settings</span>
+            <span>Settings</span>
           </a>
-          <div className="sidebar-link logout" onClick={handleLogout}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Logout
-          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 text-on-surface-variant/50 font-body text-[10px] uppercase tracking-widest hover:text-primary transition-colors duration-200"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
-      <div className={`main-wrapper ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      {/* Main Content */}
+      <main className="flex-grow ml-[280px] bg-[#f9f9f7] relative flex flex-col items-center min-h-screen overflow-y-auto">
+        {/* Mobile hamburger */}
+        <button
+          className="fixed top-4 left-4 z-50 hidden max-lg:flex items-center justify-center w-10 h-10 bg-white border border-outline-variant/30 rounded-lg text-primary"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          <span className="material-symbols-outlined text-[24px]">menu</span>
+        </button>
 
-        {/* Logo */}
-        <a href="#" className="logo">
-          <span className="logo-the">The</span>
-          <span className="logo-script">Feynman</span>
-        </a>
+        {/* Header */}
+        <header className="max-w-writing-well w-full flex flex-col items-center pt-16 px-gutter z-10">
+          <div
+            className="text-display-lg font-display italic text-primary dark:text-primary select-none text-center leading-none mb-4"
+            style={{ fontSize: "clamp(36px, 6vw, 56px)" }}
+          >
+            The Feynman
+          </div>
+          {/* Progress */}
+          <div className="w-20 h-[1px] bg-outline-variant/30 relative">
+            <div
+              className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full transition-colors duration-500 ${stage >= 1 ? "bg-primary" : "bg-outline-variant/30"}`}
+            />
+          </div>
+        </header>
 
-        {/* Step dots — top right, always visible */}
-        <div className="dots">
-          <span className={`dot ${stage >= 1 ? (stage > 1 ? "done" : "active") : ""}`}></span>
-          <span className={`dot ${stage >= 2 ? (stage > 2 ? "done" : "active") : ""}`}></span>
-          <span className={`dot ${stage >= 3 ? (stage > 3 ? "done" : "active") : ""}`}></span>
-          <span className={`dot ${stage >= 4 ? (stage > 4 ? "done" : "active") : ""}`}></span>
-          <span className={`dot ${stage >= 5 ? "active" : ""}`}></span>
-        </div>
-
-        {/* ── CONVERSATION AREA ── */}
-        <div className="main-content">
-
-          {/* Empty state — before concept entered */}
-          {!conceptConfirmed && messages.length === 0 && (
-            <div className="hint-row">
-              <p className="hint">
-                Pick any concept — a physics principle, a historical event,
-                a business idea, a coding pattern. The Feynman technique works on anything.
+        {/* Content */}
+        {isWritingWell ? (
+          /* ── Writing Well (empty state) ── */
+          <div className="max-w-writing-well w-full flex-grow flex flex-col justify-center px-gutter py-10 fade-in">
+            <div className="mb-10 text-center">
+              <p className="text-[clamp(16px,2.5vw,24px)] font-display text-on-surface-variant/40 leading-relaxed font-light italic">
+                Pick any concept — physics, history, business, or code.<br />The Feynman technique works on anything.
               </p>
             </div>
-          )}
-
-          {/* Error message */}
-          {error && (
-            <div className="error-message">
-              <p>{error}</p>
-              <button onClick={() => setError(null)}>Dismiss</button>
-            </div>
-          )}
-
-          {/* Review mode header */}
-          {isReviewMode && (
-            <div className="review-header">
-              <span className="review-label">Review</span>
-              <span className="review-concept">{concept}</span>
-            </div>
-          )}
-
-          {/* Criteria pills — visible during coaching */}
-          {conceptConfirmed && !coachingDone && passed.length > 0 && (
-            <div className="pills">
-              {CRITERIA_LABELS.map((label, i) => (
-                <span key={i} className={`pill ${passed.includes(i) ? "pass" : "pend"}`}>
-                  {label}
+            <div className="relative group">
+              <textarea
+                ref={textareaRef}
+                className="w-full min-h-[120px] bg-transparent border-0 border-b border-primary/10 focus:border-primary/10 focus:ring-0 text-[clamp(18px,2.5vw,24px)] font-display placeholder:text-outline-variant/30 placeholder:italic transition-all duration-700 resize-none py-6 text-center overflow-hidden no-scrollbar"
+                value={input}
+                onChange={(e) => handleInputChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Enter a concept…"
+                maxLength={4000}
+                autoFocus
+              />
+              <div className="mt-12 flex flex-col items-center gap-8">
+                <span className="font-body text-[10px] text-on-surface-variant/30 tracking-[0.3em]">
+                  {charCount} / 4000
                 </span>
-              ))}
-            </div>
-          )}
-
-          {/* Score section — separated from chat */}
-          {(() => {
-            const scoreMsg = messages.find(m => m.role === "ai" && m.content.startsWith("__SCORE__"));
-            if (!scoreMsg) return null;
-            
-            const data = JSON.parse(scoreMsg.content.replace("__SCORE__", ""));
-            const scoreIndex = messages.indexOf(scoreMsg);
-            const questionCount = messages.slice(0, scoreIndex).filter(m => m?.role === "user").length;
-            const criteriaMet = passed.length;
-            const statusReady = criteriaMet === 5;
-
-            const encouragementMap: Record<string, string> = {
-              "Expert-level clarity": "Brilliant work! You've truly mastered this concept.",
-              "Strong understanding": "Great job! You have a solid grasp with room to refine.",
-              "Good grasp": "Nice progress! Keep building on what you know.",
-              "Developing understanding": "You're getting there — keep exploring the gaps.",
-              "Keep exploring": "Every attempt builds understanding. Try again!",
-            };
-            const encouragement = encouragementMap[data.label] || "Well done! Keep learning and growing.";
-
-            return (
-              <div ref={scoreSectionRef} className="score-section">
-                {/* 3 stat cards */}
-                <div className="score-stats-grid">
-                  <div className="score-stat-card">
-                    <div className="score-stat-number">{criteriaMet}/5</div>
-                    <div className="score-stat-label">Criteria Met</div>
-                  </div>
-                  <div className="score-stat-card">
-                    <div className="score-stat-number">{questionCount}</div>
-                    <div className="score-stat-label">Questions Asked</div>
-                  </div>
-                  <div className="score-stat-card">
-                    <div className={`score-stat-number ${statusReady ? "status-ready" : "status-progress"}`}>
-                      {statusReady ? "Ready" : "In Progress"}
-                    </div>
-                    <div className="score-stat-label">Status</div>
-                  </div>
-                </div>
-
-                {/* Encouragement message */}
-                <div className="encouragement-msg">
-                  <p>{encouragement}</p>
-                </div>
-
-                {/* Score card */}
-                <div className="score-card">
-                  <div className="score-num">{data.score}</div>
-                  <div className="score-label-text">{data.label}</div>
-                  <p className="score-desc">{data.description}</p>
-                  <div className="strengths">
-                    {data.strengths?.map((s: string, j: number) => (
-                      <div key={j} className="strength">{s}</div>
-                    ))}
-                  </div>
-                  <button className="btn" style={{ marginTop: "28px" }} onClick={resetSession}>
-                    New concept
-                  </button>
-                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitDisabled}
+                  className="bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.4em] uppercase px-14 py-4 submit-btn-shadow active:scale-95 transition-all duration-500 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  START MASTERY
+                </button>
               </div>
-            );
-          })()}
-
-          {/* Chat messages */}
-          <div className="chat-area">
-            {messages.map((msg, i) => {
-              if (!msg?.content) return null;
-              
-              // Skip score message (rendered above)
-              if (msg.role === "ai" && msg.content.startsWith("__SCORE__")) {
-                return null;
-              }
-
-              return msg.role === "ai" ? (
-                <div key={i} className="msg-ai">
-                  <div className="cursor" style={{ animation: "none", opacity: 1 }}></div>
-                  <p className="msg-ai-text">{msg.content}</p>
-                </div>
-              ) : (
-                <p key={i} className="msg-user">{msg.content}</p>
-              );
-            })}
-
-            <div ref={chatEndRef} />
+            </div>
           </div>
+        ) : (
+          /* ── Session View ── */
+          <div className="max-w-writing-well w-full flex-grow flex flex-col px-gutter py-8 fade-in">
+            {/* Error */}
+            {error && (
+              <div className="error-message rounded-lg p-4 mb-6 flex justify-between items-center">
+                <p className="text-error text-[14px] font-body">{error}</p>
+                <button onClick={() => setError(null)} className="text-error underline text-[13px] font-body">Dismiss</button>
+              </div>
+            )}
 
-          {/* ── INPUT AREA ── */}
-          {!finalSubmitted && !isReviewMode && (
-            <div className="input-area">
-              {/* Loading indicator below input */}
+            {/* Review mode header */}
+            {isReviewMode && (
+              <div className="flex items-center gap-3 p-4 bg-surface-container-lowest rounded-lg mb-8 border border-outline-variant/20">
+                <span className="font-body text-[10px] tracking-[0.14em] uppercase text-on-surface-variant/60 bg-primary/10 px-2.5 py-1 rounded">Review</span>
+                <span className="font-display text-[20px] text-on-background">{concept}</span>
+              </div>
+            )}
+
+            {/* Criteria pills */}
+            {conceptConfirmed && !coachingDone && passed.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {CRITERIA_LABELS.map((label, i) => (
+                  <span
+                    key={i}
+                    className={`font-body text-[10px] tracking-[0.1em] uppercase px-3 py-1.5 rounded-full border ${passed.includes(i) ? "pill-pass" : "pill-pending"}`}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Score section */}
+            {(() => {
+              const scoreMsg = messages.find(m => m.role === "ai" && m.content.startsWith("__SCORE__"));
+              if (!scoreMsg) return null;
+              const data = JSON.parse(scoreMsg.content.replace("__SCORE__", ""));
+              const scoreIndex = messages.indexOf(scoreMsg);
+              const questionCount = messages.slice(0, scoreIndex).filter(m => m?.role === "user").length;
+              const criteriaMet = passed.length;
+              const statusReady = criteriaMet === 5;
+              const encouragementMap: Record<string, string> = {
+                "Expert-level clarity": "Brilliant work! You've truly mastered this concept.",
+                "Strong understanding": "Great job! You have a solid grasp with room to refine.",
+                "Good grasp": "Nice progress! Keep building on what you know.",
+                "Developing understanding": "You're getting there — keep exploring the gaps.",
+                "Keep exploring": "Every attempt builds understanding. Try again!",
+              };
+              const encouragement = encouragementMap[data.label] || "Well done! Keep learning and growing.";
+              return (
+                <div ref={scoreSectionRef} className="w-full pb-8 mb-6 border-b border-outline-variant/20">
+                  <div className="grid grid-cols-3 gap-4 mb-6 max-sm:grid-cols-1">
+                    <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                      <div className="font-display text-[2rem] text-white mb-1">{criteriaMet}/5</div>
+                      <div className="font-body text-[10px] text-white/85 uppercase tracking-wider">Criteria Met</div>
+                    </div>
+                    <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                      <div className="font-display text-[2rem] text-white mb-1">{questionCount}</div>
+                      <div className="font-body text-[10px] text-white/85 uppercase tracking-wider">Questions Asked</div>
+                    </div>
+                    <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                      <div className={`font-display text-[2rem] mb-1 ${statusReady ? "text-white" : "text-white/75"}`}>
+                        {statusReady ? "Ready" : "In Progress"}
+                      </div>
+                      <div className="font-body text-[10px] text-white/85 uppercase tracking-wider">Status</div>
+                    </div>
+                  </div>
+                  <div className="bg-primary/8 border-l-4 border-primary rounded-r-lg p-4 mb-6">
+                    <p className="font-display text-[18px] italic text-primary leading-tight">{encouragement}</p>
+                  </div>
+                  <div className="flex flex-col items-center text-center bg-surface-container-lowest rounded-xl p-8 shadow-[0_2px_12px_rgba(20,66,45,0.1)]">
+                    <div className="font-display text-[80px] text-primary leading-none mb-2">{data.score}</div>
+                    <div className="font-body text-[14px] tracking-[0.16em] uppercase text-on-surface-variant mb-6">{data.label}</div>
+                    <p className="font-display text-[20px] italic text-on-background leading-relaxed max-w-[680px] mb-6">{data.description}</p>
+                    <div className="flex flex-col gap-2 w-full max-w-md">
+                      {data.strengths?.map((s: string, j: number) => (
+                        <div key={j} className="flex items-center gap-3 font-display text-[18px] text-on-background">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={resetSession}
+                      className="mt-8 bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
+                    >
+                      New concept
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Chat messages */}
+            <div className="chat-area flex flex-col gap-6 flex-1 overflow-y-auto pb-4">
+              {messages.map((msg, i) => {
+                if (!msg?.content) return null;
+                if (msg.role === "ai" && msg.content.startsWith("__SCORE__")) return null;
+                return msg.role === "ai" ? (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-[3px] min-h-[18px] bg-primary flex-shrink-0 mt-1.5 rounded-full" />
+                    <p className="msg-ai-text font-display italic text-on-surface-variant/80 leading-[1.7] max-w-[700px]">{msg.content}</p>
+                  </div>
+                ) : (
+                  <p key={i} className="msg-user font-display text-on-background leading-[1.6] pl-4">{msg.content}</p>
+                );
+              })}
               {isLoading && (
-                <div className="loading-dots" style={{ marginTop: '12px', marginLeft: '14px' }}>
-                  <span></span><span></span><span></span>
+                <div className="flex gap-1.5 items-center pl-4">
+                  <span className="w-[5px] h-[5px] bg-outline-variant rounded-full" />
+                  <span className="w-[5px] h-[5px] bg-outline-variant rounded-full" />
+                  <span className="w-[5px] h-[5px] bg-outline-variant rounded-full" />
                 </div>
               )}
-              
-              <div className={`input-row ${inputFocused ? 'input-focused' : ''}`}>
-                <div className="cursor"></div>
-                {!conceptConfirmed ? (
-                  // Single line for concept
-                  <input
-                    ref={inputRef as React.RefObject<HTMLInputElement>}
-                    className="ghost-input"
-                    type="text"
-                    value={input}
-                    onChange={(e) => handleInputChange(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={placeholder}
-                    autoComplete="off"
-                    maxLength={4000}
-                    autoFocus
-                    onFocus={() => setInputFocused(true)}
-                    onBlur={() => setInputFocused(false)}
-                  />
-                ) : (
-                  // Textarea for explanations
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input area */}
+            {!finalSubmitted && !isReviewMode && (
+              <div className="mt-auto pt-6 border-t border-outline-variant/10">
+                <div className="flex flex-col gap-4">
                   <textarea
-                    ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-                    className="ghost-input"
+                    ref={textareaRef}
+                    className="w-full bg-transparent border-0 border-b border-primary/10 focus:border-primary focus:ring-0 text-[clamp(17px,2vw,22px)] font-display placeholder:text-outline-variant/30 placeholder:italic transition-all duration-500 resize-none py-3 no-scrollbar"
                     value={input}
                     onChange={(e) => handleInputChange(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -782,31 +696,31 @@ export default function FeynmanPage() {
                     rows={coachingDone ? 5 : 3}
                     maxLength={4000}
                     autoFocus
-                    onFocus={() => setInputFocused(true)}
-                    onBlur={() => setInputFocused(false)}
                   />
-                )}
+                  <div className="flex items-center justify-between">
+                    <span className={`font-body text-[10px] tracking-[0.3em] ${charCount > 0 ? "text-primary" : "text-on-surface-variant/30"}`}>
+                      {charCount} / 4000
+                    </span>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={submitDisabled}
+                      className="bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.4em] uppercase px-12 py-4 submit-btn-shadow active:scale-95 transition-all duration-500 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      {isLoading ? "…" : coachingDone && !finalSubmitted ? "RATE MY UNDERSTANDING" : "SUBMIT"}
+                    </button>
+                  </div>
+                </div>
               </div>
+            )}
+          </div>
+        )}
 
-              <div className="bottom-bar">
-                <span className="char-count">{charCount} / 4000</span>
-                <button
-                  className="btn"
-                  onClick={handleSubmit}
-                  disabled={submitDisabled}
-                >
-                  {isLoading
-                    ? "…"
-                    : coachingDone && !finalSubmitted
-                    ? "Rate my understanding"
-                    : "Submit"}
-                </button>
-              </div>
-            </div>
-          )}
-
-        </div>
-      </div>
+        {/* Footer */}
+        <footer className="w-full max-w-writing-well px-gutter pb-6 text-on-surface-variant/20 flex justify-between items-center text-[9px] font-body tracking-[0.2em] uppercase mt-auto">
+          <span>Academic Excellence</span>
+          <span>System v4.1.0</span>
+        </footer>
+      </main>
     </div>
   );
 }

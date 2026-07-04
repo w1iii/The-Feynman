@@ -31,23 +31,35 @@ type Billing = {
   total_sessions: number;
 };
 
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+}
+
 export default function SettingsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [_billing, setBilling] = useState<Billing | null>(null);
   const [, startTransition] = useTransition();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sessions, setSessions] = useState<Array<{ id: string; concept: string; created_at: string; status: string }>>([]);
 
-  // Profile editing
   const [displayName, setDisplayName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Stats loading
   const [statsLoading, setStatsLoading] = useState(true);
   const [billingLoading, setBillingLoading] = useState(true);
 
@@ -55,7 +67,6 @@ export default function SettingsPage() {
     try {
       const supabase = createClient();
 
-      // Fire all requests in parallel (include billing)
       const [userResult, profileRes, statsRes, billingRes, sessionsRes] = await Promise.all([
         supabase.auth.getUser(),
         fetch("/api/profile"),
@@ -75,7 +86,6 @@ export default function SettingsPage() {
       setUser(user as User);
       setDisplayName(user.user_metadata?.full_name || "");
 
-      // Handle profile
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         setProfile({
@@ -84,21 +94,18 @@ export default function SettingsPage() {
         });
       }
 
-      // Handle billing
       if (billingRes && billingRes.ok) {
         const billingData = await billingRes.json();
         setBilling(billingData);
       }
       setBillingLoading(false);
 
-      // Handle stats
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
       }
       setStatsLoading(false);
 
-      // Handle sessions
       if (sessionsRes.ok) {
         const sessionsData = await sessionsRes.json();
         if (sessionsData.sessions) setSessions(sessionsData.sessions);
@@ -159,30 +166,6 @@ export default function SettingsPage() {
     setSaveMessage(null);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    if (days === 0) return "Today";
-    if (days === 1) return "Yesterday";
-    if (days < 7) return `${days} days ago`;
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-    });
-  };
-
-  const getInitials = (name: string | undefined, email: string) => {
-    if (name) {
-      const parts = name.split(" ");
-      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      return name.slice(0, 2).toUpperCase();
-    }
-    return email.slice(0, 2).toUpperCase();
-  };
-
   const loadSession = (sessionId: string) => {
     window.location.assign(`/feynman?session=${sessionId}`);
   };
@@ -205,149 +188,147 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="app-layout">
-      {/* Mobile Hamburger */}
-      <button className="hamburger" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M3 12h18M3 6h18M3 18h18" />
-        </svg>
-      </button>
-
-      <button
-        className={`sidebar-show-btn ${sidebarCollapsed ? "visible" : ""}`}
-        onClick={() => setSidebarCollapsed(false)}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-      </button>
-
-      <div className={`sidebar-overlay ${mobileMenuOpen ? "visible" : ""}`} onClick={() => setMobileMenuOpen(false)} />
+    <div className="flex h-screen w-full bg-background text-on-background overflow-hidden selection:bg-primary/10 selection:text-primary">
+      {/* Mobile overlay */}
+      <div
+        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-300 ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
 
       {/* Sidebar */}
-      <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""} ${mobileMenuOpen ? "mobile-open" : ""}`}>
-        <div className="sidebar-header">
-          <button className="sidebar-toggle" onClick={() => { setSidebarCollapsed(true); setMobileMenuOpen(false); }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="profile-section">
-          <div className="profile-info">
-            <div className="profile-avatar">
-              {user ? getInitials(user.user_metadata?.full_name, user.email) : "?"}
-            </div>
-            <div className="profile-details">
-              <div className="profile-name">{user?.user_metadata?.full_name || "User"}</div>
-              <div className="profile-email">{user?.email || "No email"}</div>
-              <span className={`profile-plan ${profile?.plan === "free" ? "free" : ""}`}>
-                {profile?.plan || "Free"} Plan
-              </span>
+      <aside className="fixed left-0 top-0 h-full w-[280px] flex flex-col py-12 z-50 bg-transparent border-r border-outline-variant/20">
+        <div className="px-8 mb-12">
+          <div className="flex flex-col gap-1">
+            <span className="text-[20px] font-display italic text-primary leading-tight">
+              {user?.user_metadata?.full_name || "User"}
+            </span>
+            <span className="text-[11px] font-body text-on-surface-variant/60 tracking-wider">
+              {user?.email || ""}
+            </span>
+            <div className="mt-4 px-3 py-1 inline-block border border-outline-variant/30 rounded-full text-[9px] font-bold tracking-widest text-on-surface-variant/50 w-fit uppercase">
+              {profile?.plan || "FREE"} PLAN
             </div>
           </div>
         </div>
 
-        <div className="new-session-section">
-          <a href="/feynman" className="new-session-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            New Session
+        <div className="px-8 mb-12">
+          <a
+            href="/feynman"
+            className="flex items-center gap-3 text-primary font-body text-[11px] tracking-[0.2em] uppercase group transition-all duration-300"
+          >
+            <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform duration-500">arrow_back</span>
+            <span className="border-b border-primary/20 group-hover:border-primary pb-1">BACK TO APP</span>
           </a>
         </div>
 
-        <div className="history-section">
-          <div className="history-header">History</div>
-          <div className="history-list">
-            {sessions.length === 0 ? (
-              <div className="history-empty">No sessions yet</div>
-            ) : (
-              sessions.map((session) => (
-                <div key={session.id} className="history-item" onClick={() => loadSession(session.id)}>
-                  <div className="history-item-content">
-                    <span className="history-concept">{session.concept}</span>
-                    <span className="history-date">{formatDate(session.created_at)}</span>
-                  </div>
-                  <button
-                    className="history-delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteSession(session.id);
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
-                  </button>
+        <nav className="flex-grow overflow-y-auto custom-scrollbar px-0">
+          <div className="px-8 mb-6 font-body text-[10px] text-outline-variant/60 uppercase tracking-[0.2em]">
+            History
+          </div>
+          {sessions.length === 0 ? (
+            <div className="px-8 font-body text-[13px] text-on-surface-variant/40 italic">
+              No sessions yet
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <div
+                key={session.id}
+                onClick={() => loadSession(session.id)}
+                className="group flex items-center justify-between text-on-surface-variant/70 font-body text-[14px] px-8 py-3 hover:text-primary transition-colors duration-300 cursor-pointer"
+              >
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="truncate">{session.concept}</span>
+                  <span className="text-[11px] text-on-surface-variant/40">{formatDate(session.created_at)}</span>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                  className="opacity-0 group-hover:opacity-100 text-on-surface-variant/40 hover:text-error transition-all duration-200 flex-shrink-0 ml-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+              </div>
+            ))
+          )}
+        </nav>
 
-        <div className="sidebar-footer">
-          <a href="/feynman/settings" className="sidebar-link active">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-            Settings
+        <div className="mt-auto pt-6 px-8 flex flex-col gap-4">
+          <a
+            href="/feynman/settings"
+            className="flex items-center gap-3 text-primary font-body text-[10px] uppercase tracking-widest transition-colors duration-200"
+          >
+            <span className="material-symbols-outlined text-[18px]">settings</span>
+            <span>Settings</span>
           </a>
-          <div className="sidebar-link logout" onClick={handleLogout}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Logout
-          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 text-on-surface-variant/50 font-body text-[10px] uppercase tracking-widest hover:text-primary transition-colors duration-200"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
-      <div className={`main-wrapper ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      {/* Main Content */}
+      <main className="flex-grow ml-[280px] bg-[#f9f9f7] relative flex flex-col min-h-screen overflow-y-auto">
+        {/* Mobile hamburger */}
+        <button
+          className="fixed top-4 left-4 z-50 hidden max-lg:flex items-center justify-center w-10 h-10 bg-white border border-outline-variant/30 rounded-lg text-primary"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          <span className="material-symbols-outlined text-[24px]">menu</span>
+        </button>
 
-        {/* Logo */}
-        <a href="/feynman" className="logo">
-          <span className="logo-script">Settings</span>
-        </a>
+        {/* Header */}
+        <header className="max-w-writing-well w-full flex flex-col items-center pt-16 px-gutter z-10">
+          <div
+            className="font-display italic text-primary select-none text-center leading-none mb-4"
+            style={{ fontSize: "clamp(28px, 5vw, 42px)" }}
+          >
+            Settings
+          </div>
+          <div className="w-16 h-[1px] bg-outline-variant/30 relative">
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
+          </div>
+        </header>
 
-        {/* ── SETTINGS CONTENT ── */}
-        <div className="main-content settings-content">
+        {/* Content */}
+        <div className="max-w-writing-well w-full flex-grow flex flex-col px-gutter py-8 fade-in">
           {/* Save message */}
           {saveMessage && (
-            <div className={`save-message ${saveMessage.type}`}>
-              {saveMessage.text}
-              <button onClick={() => setSaveMessage(null)} className="dismiss-btn">×</button>
+            <div className={`flex items-center justify-between p-3 rounded-lg mb-6 font-body text-[13px] ${
+              saveMessage.type === "success"
+                ? "bg-primary/10 text-primary border border-primary/20"
+                : "bg-error-container text-error border border-error/20"
+            }`}>
+              <span>{saveMessage.text}</span>
+              <button onClick={() => setSaveMessage(null)} className="opacity-60 hover:opacity-100 ml-4">&times;</button>
             </div>
           )}
 
           {/* Profile Section */}
-          <section className="settings-section">
-            <h2 className="settings-section-title">Profile</h2>
-            <div className="settings-card">
-              <div className="settings-field">
-                <label className="settings-label">Display Name</label>
+          <section className="mb-8">
+            <h2 className="font-body text-[10px] text-on-surface-variant/50 uppercase tracking-[0.15em] mb-3 pb-2 border-b border-outline-variant/20">Profile</h2>
+            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)]">
+              <div className="mb-5">
+                <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Display Name</label>
                 {isEditingName ? (
-                  <div className="settings-edit-row">
+                  <div className="flex flex-wrap gap-3 items-center">
                     <input
                       type="text"
-                      className="settings-input"
+                      className="flex-1 min-w-[200px] px-3.5 py-2.5 border border-outline-variant/50 rounded-lg font-body text-[14px] text-on-background bg-transparent focus:outline-none focus:border-primary transition-colors"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder="Your name"
                       maxLength={50}
                       autoFocus
                     />
-                    <div className="settings-edit-actions">
-                      <button className="settings-btn secondary" onClick={handleCancelEdit}>
+                    <div className="flex gap-2">
+                      <button className="px-4 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-surface-variant bg-outline-variant/20 hover:bg-outline-variant/40 transition-colors" onClick={handleCancelEdit}>
                         Cancel
                       </button>
                       <button
-                        className="settings-btn primary"
+                        className="px-4 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-primary bg-primary hover:bg-[#0d3323] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         onClick={handleSaveName}
                         disabled={isSaving || !displayName.trim()}
                       >
@@ -356,151 +337,169 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="settings-display-row">
-                    <span className="settings-value">{user?.user_metadata?.full_name || "Not set"}</span>
-                    <button className="settings-edit-btn" onClick={() => setIsEditingName(true)}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
+                  <div className="flex justify-between items-center">
+                    <span className="font-display text-[18px] text-on-background">{user?.user_metadata?.full_name || "Not set"}</span>
+                    <button className="flex items-center gap-1.5 text-primary font-body text-[11px] tracking-[0.1em] hover:underline" onClick={() => setIsEditingName(true)}>
+                      <span className="material-symbols-outlined text-[16px]">edit</span>
                       Edit
                     </button>
                   </div>
                 )}
               </div>
 
-              <div className="settings-field">
-                <label className="settings-label">Email</label>
-                <span className="settings-value">{user?.email || "No email"}</span>
+              <div className="mb-5">
+                <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Email</label>
+                <span className="font-display text-[16px] text-on-background">{user?.email || "No email"}</span>
               </div>
 
-              <div className="settings-field">
-                <label className="settings-label">Plan</label>
-                <span className={`settings-value plan-badge ${profile?.plan === "free" ? "free" : ""}`}>
+              <div>
+                <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Plan</label>
+                <span className={`inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase ${
+                  profile?.plan === "free"
+                    ? "bg-outline-variant/20 text-on-surface-variant/60"
+                    : "bg-primary/10 text-primary"
+                }`}>
                   {profile?.plan || "Free"} Plan
                 </span>
               </div>
             </div>
           </section>
 
-          { /* Billing Section */ }
-          <section className="billing-section">
-            <h2 className="settings-section-title"> Billing </h2>
-            {
-              billingLoading ? (
-                <div className="settings-card loading">
-                  <div className="loading-spinner"></div>
-                  <span>Loading billing...</span>
-                </div>
-              ) : (
-                <div className="settings-card billing-card">
-                  <div className="billing-row">
-                    <div>
-                      <div className="billing-title">Plan</div>
-                      <div className={`settings-value plan-badge ${profile?.plan === "free" ? "free" : ""}`}>{profile?.plan || 'Free'}</div>
-                    </div>
-                    <div className="billing-actions">
-                      {profile?.plan === 'free' ? (
-                        <button className="settings-btn primary" onClick={async () => {
-                          // Kick off checkout flow
+          {/* Billing Section */}
+          <section className="mb-8">
+            <h2 className="font-body text-[10px] text-on-surface-variant/50 uppercase tracking-[0.15em] mb-3 pb-2 border-b border-outline-variant/20">Billing</h2>
+            {billingLoading ? (
+              <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)] flex items-center justify-center gap-3">
+                <div className="w-5 h-5 border-2 border-outline-variant/40 border-t-primary rounded-full animate-spin" />
+                <span className="font-body text-[13px] text-on-surface-variant/60">Loading billing...</span>
+              </div>
+            ) : (
+              <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)]">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <div className="font-body text-[11px] text-on-surface-variant/50 mb-1 uppercase tracking-[0.08em]">Plan</div>
+                    <span className={`inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase ${
+                      profile?.plan === "free"
+                        ? "bg-outline-variant/20 text-on-surface-variant/60"
+                        : "bg-primary/10 text-primary"
+                    }`}>
+                      {profile?.plan || "Free"}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    {profile?.plan === "free" ? (
+                      <button
+                        className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-primary bg-primary hover:bg-[#0d3323] transition-colors"
+                        onClick={async () => {
                           try {
-                            const res = await fetch('/api/billing/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID }) })
-                            const data = await res.json()
-                            if (data.url) window.location.href = data.url
-                            else alert(data.error || 'Failed to create checkout')
+                            const res = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID }) });
+                            const data = await res.json();
+                            if (data.url) window.location.href = data.url;
+                            else alert(data.error || "Failed to create checkout");
                           } catch {
-                            alert('Failed to start checkout')
+                            alert("Failed to start checkout");
                           }
-                        }}>Upgrade</button>
-                      ) : (
-                        <button className="settings-btn" onClick={async () => {
-                          // Open customer portal - requires customer id which we don't have in client yet
+                        }}
+                      >
+                        Upgrade
+                      </button>
+                    ) : (
+                      <button
+                        className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-surface-variant border border-outline-variant/40 hover:bg-outline-variant/10 transition-colors"
+                        onClick={async () => {
                           try {
-                            // Server may determine customer based on auth
-                            const res = await fetch('/api/billing/portal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
-                            const data = await res.json()
-                            if (data.url) window.location.href = data.url
-                            else alert(data.error || 'Failed to open billing portal')
+                            const res = await fetch("/api/billing/portal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+                            const data = await res.json();
+                            if (data.url) window.location.href = data.url;
+                            else alert(data.error || "Failed to open billing portal");
                           } catch {
-                            alert('Failed to open billing portal')
+                            alert("Failed to open billing portal");
                           }
-                        }}>Manage Subscription</button>
-                      )}
-                    </div>
+                        }}
+                      >
+                        Manage Subscription
+                      </button>
+                    )}
                   </div>
                 </div>
-              )
-            }
+              </div>
+            )}
           </section>
 
           {/* Stats Section */}
-          <section className="settings-section">
-            <h2 className="settings-section-title">Learning Stats</h2>
+          <section className="mb-8">
+            <h2 className="font-body text-[10px] text-on-surface-variant/50 uppercase tracking-[0.15em] mb-3 pb-2 border-b border-outline-variant/20">Learning Stats</h2>
             {statsLoading ? (
-              <div className="settings-card loading">
-                <div className="loading-spinner"></div>
-                <span>Loading stats...</span>
+              <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)] flex items-center justify-center gap-3">
+                <div className="w-5 h-5 border-2 border-outline-variant/40 border-t-primary rounded-full animate-spin" />
+                <span className="font-body text-[13px] text-on-surface-variant/60">Loading stats...</span>
               </div>
             ) : stats ? (
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <div className="stat-number">{stats.total_sessions}</div>
-                  <div className="stat-label">Total Sessions</div>
+              <div className="grid grid-cols-3 max-sm:grid-cols-2 gap-3">
+                <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                  <div className="font-display text-[1.6rem] text-white mb-1">{stats.total_sessions}</div>
+                  <div className="font-body text-[9px] text-white/85 uppercase tracking-wider">Total Sessions</div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.completed_sessions}</div>
-                  <div className="stat-label">Completed</div>
+                <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                  <div className="font-display text-[1.6rem] text-white mb-1">{stats.completed_sessions}</div>
+                  <div className="font-body text-[9px] text-white/85 uppercase tracking-wider">Completed</div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.avg_score}</div>
-                  <div className="stat-label">Avg Score</div>
+                <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                  <div className="font-display text-[1.6rem] text-white mb-1">{stats.avg_score}</div>
+                  <div className="font-body text-[9px] text-white/85 uppercase tracking-wider">Avg Score</div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.best_score}</div>
-                  <div className="stat-label">Best Score</div>
+                <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                  <div className="font-display text-[1.6rem] text-white mb-1">{stats.best_score}</div>
+                  <div className="font-body text-[9px] text-white/85 uppercase tracking-wider">Best Score</div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.completion_rate}%</div>
-                  <div className="stat-label">Completion Rate</div>
+                <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                  <div className="font-display text-[1.6rem] text-white mb-1">{stats.completion_rate}%</div>
+                  <div className="font-body text-[9px] text-white/85 uppercase tracking-wider">Completion Rate</div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-number">{stats.unique_concepts}</div>
-                  <div className="stat-label">Concepts Explored</div>
+                <div className="bg-primary-container/80 rounded-xl p-5 text-center">
+                  <div className="font-display text-[1.6rem] text-white mb-1">{stats.unique_concepts}</div>
+                  <div className="font-body text-[9px] text-white/85 uppercase tracking-wider">Concepts Explored</div>
                 </div>
               </div>
             ) : (
-              <div className="settings-card empty">
-                <p>No stats available yet. Start a session to see your learning progress!</p>
+              <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)] text-center">
+                <p className="font-body text-[13px] text-on-surface-variant/50 italic">No stats available yet. Start a session to see your learning progress!</p>
               </div>
             )}
           </section>
 
           {/* Account Section */}
-          <section className="settings-section">
-            <h2 className="settings-section-title">Account</h2>
-            <div className="settings-card">
-              <div className="settings-field">
-                <label className="settings-label">Change Password</label>
-                <span className="settings-value">
-                  <a href="#" className="settings-link" onClick={(e) => {
+          <section className="mb-8">
+            <h2 className="font-body text-[10px] text-on-surface-variant/50 uppercase tracking-[0.15em] mb-3 pb-2 border-b border-outline-variant/20">Account</h2>
+            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)]">
+              <div className="mb-5">
+                <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Change Password</label>
+                <button
+                  className="font-body text-[13px] text-primary hover:underline"
+                  onClick={(e) => {
                     e.preventDefault();
-                    // Supabase password reset would go here
                     alert("Password reset feature coming soon!");
-                  }}>
-                    Reset your password
-                  </a>
-                </span>
+                  }}
+                >
+                  Reset your password
+                </button>
               </div>
-              <div className="settings-field">
-                <label className="settings-label">Sign Out</label>
-                <button className="settings-btn danger" onClick={handleLogout}>
+              <div>
+                <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Sign Out</label>
+                <button className="px-4 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-error bg-error-container hover:bg-error/10 transition-colors" onClick={handleLogout}>
                   Sign Out
                 </button>
               </div>
             </div>
           </section>
         </div>
-      </div>
+
+        {/* Footer */}
+        <footer className="w-full max-w-writing-well px-gutter pb-6 text-on-surface-variant/20 flex justify-between items-center text-[9px] font-body tracking-[0.2em] uppercase mt-auto">
+          <span>Academic Excellence</span>
+          <span>System v4.1.0</span>
+        </footer>
+      </main>
     </div>
   );
 }

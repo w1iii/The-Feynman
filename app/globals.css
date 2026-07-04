@@ -1,4 +1,33 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #14422d;
+  --color-primary-container: #2d5a43;
+  --color-on-primary: #ffffff;
+  --color-on-primary-fixed: #002112;
+  --color-background: #f9f9f7;
+  --color-on-background: #1a1c1b;
+  --color-on-surface-variant: #414943;
+  --color-surface-variant: #e2e3e0;
+  --color-outline-variant: #c0c9c1;
+  --color-outline: #717973;
+  --color-surface-container-low: #f4f4f1;
+  --color-surface-container: #eeeeec;
+  --color-surface-container-high: #e8e8e6;
+  --color-surface-container-highest: #e2e3e0;
+  --color-surface-dim: #dadad8;
+  --color-surface: #f9f9f7;
+  --color-surface-container-lowest: #ffffff;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-inverse-surface: #2f3130;
+  --color-inverse-on-surface: #f1f1ef;
+  --font-display: "EB Garamond", serif;
+  --font-body: "Manrope", sans-serif;
+  --spacing-writing-well: 820px;
+  --spacing-gutter: 32px;
+}
+
 @font-face {
   font-family: 'Galeriya';
   src: url('/fonts/Galeriya.woff2') format('woff2'),
@@ -10,6 +39,28 @@
 
 :root {
   --color-green: #2d6a4f;
+  --primary: #14422d;
+  --primary-container: #2d5a43;
+  --on-primary: #ffffff;
+  --on-primary-fixed: #002112;
+  --background: #f9f9f7;
+  --on-background: #1a1c1b;
+  --on-surface-variant: #414943;
+  --surface-variant: #e2e3e0;
+  --outline-variant: #c0c9c1;
+  --outline: #717973;
+  --surface-container-low: #f4f4f1;
+  --surface-container: #eeeeec;
+  --surface-container-high: #e8e8e6;
+  --surface-container-highest: #e2e3e0;
+  --surface-bright: #f9f9f7;
+  --surface-dim: #dadad8;
+  --surface: #f9f9f7;
+  --surface-container-lowest: #ffffff;
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --inverse-surface: #2f3130;
+  --inverse-on-surface: #f1f1ef;
 }
 
 body {

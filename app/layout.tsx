@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Great_Vibes, Cormorant_Garamond, Josefin_Sans } from "next/font/google";
+import { Geist, Geist_Mono, Great_Vibes, Cormorant_Garamond, Josefin_Sans, EB_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,6 +31,19 @@ const josefin = Josefin_Sans({
   variable: "--font-sans",
 });
 
+const ebGaramond = EB_Garamond({
+  weight: ["400", "500", "800"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-display",
+});
+
+const manrope = Manrope({
+  weight: ["200", "300", "400", "500", "700", "800"],
+  subsets: ["latin"],
+  variable: "--font-body",
+});
+
 export const metadata: Metadata = {
   title: "The Feynman",
   description: "Learn anything deeply.",
@@ -50,9 +63,12 @@ export default function RootLayout({
         ${greatVibes.variable}
         ${cormorant.variable}
         ${josefin.variable}
+        ${ebGaramond.variable}
+        ${manrope.variable}
         h-full antialiased
       `}
     >
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" precedence="default" />
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
