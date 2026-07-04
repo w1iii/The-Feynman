@@ -14,7 +14,7 @@ export async function GET(_request: NextRequest) {
 
   const { data: sessions, error: sessionsError } = await supabase
     .from('sessions')
-    .select('*')
+    .select('id, concept, created_at, status, final_score, score_label, score_description')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 

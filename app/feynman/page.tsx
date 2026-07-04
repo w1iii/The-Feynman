@@ -2,31 +2,12 @@
 
 import { useState, useEffect, useRef, useTransition } from "react";
 import { createClient } from "../lib/supabase/client";
-import "./page.css";
+import { authFetch } from "../lib/api/client";
+import { useUser } from "../lib/context/user-context";
 
 type Message = {
   role: "ai" | "user";
   content: string;
-};
-
-type Session = {
-  id: string;
-  concept: string;
-  created_at: string;
-  status: string;
-  final_score?: number;
-};
-
-type User = {
-  id: string;
-  email: string;
-  user_metadata?: {
-    full_name?: string;
-  };
-};
-
-type Profile = {
-  plan: string;
 };
 
 type Stage = 1 | 2 | 3 | 4 | 5;
@@ -55,11 +36,8 @@ const CRITERIA_LABELS = [
 ];
 
 export default function FeynmanPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const { user, profile, sessions, refresh } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const initialized = useRef(false);
 
   const [concept, setConcept] = useState("");
   const [conceptConfirmed, setConceptConfirmed] = useState(false);
@@ -94,38 +72,12 @@ export default function FeynmanPage() {
     }
   }, [messages]);
 
-  const fetchUserData = async () => {
-    try {
-      const supabase = createClient();
-      const [userResult, profileRes, sessionsRes] = await Promise.all([
-        supabase.auth.getUser(),
-        fetch("/api/profile"),
-        fetch("/api/getsession"),
-      ]);
-      const { data: { user }, error: authError } = userResult;
-      if (authError || !user) return;
-      setUser(user as User);
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-        setProfile({ plan: profileData.plan || "free" });
-      } else {
-        setProfile({ plan: "free" });
-      }
-      if (sessionsRes.ok) {
-        const sessionsData = await sessionsRes.json();
-        if (sessionsData.sessions) setSessions(sessionsData.sessions as Session[]);
-      }
-    } catch (err) {
-      console.log("Error fetching user:", err);
-    }
-  };
-
   const loadSession = async (sessionId: string) => {
     setIsLoading(true);
     setError(null);
     setMobileMenuOpen(false);
     try {
-      const res = await fetch(`/api/session/${sessionId}`);
+      const res = await authFetch(`/api/session/${sessionId}`);
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || "Failed to load session");
@@ -189,12 +141,6 @@ export default function FeynmanPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    fetchUserData();
-  }, []);
-
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -203,16 +149,14 @@ export default function FeynmanPage() {
 
   const deleteSession = async (sessionIdToDelete: string) => {
     try {
-      const res = await fetch(`/api/deletesession/${sessionIdToDelete}`, {
+      const res = await authFetch(`/api/deletesession/${sessionIdToDelete}`, {
         method: 'DELETE'
       });
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || "Failed to delete session");
       }
-      setSessions(prevSessions =>
-        prevSessions.filter(session => session.id !== sessionIdToDelete)
-      );
+      refresh();
       if (sessionId === sessionIdToDelete) {
         setSessionId(null);
         setMessages([]);
@@ -236,7 +180,7 @@ export default function FeynmanPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const sessionRes = await fetch("/api/newsession", {
+      const sessionRes = await authFetch("/api/newsession", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ concept: trimmed }),
@@ -262,6 +206,7 @@ export default function FeynmanPage() {
       const opening = { role: "user" as const, content: `I want to explain: ${trimmed}` };
       const history = [opening];
       setApiMessages(history);
+      refresh();
       await callCoach(trimmed, history, sessionData.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -298,7 +243,7 @@ export default function FeynmanPage() {
     setIsLoading(true);
     setStage(4);
     try {
-      const res = await fetch("/api/rate", {
+      const res = await authFetch("/api/rate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ concept, finalExplanation: trimmed, session_id: sessionId }),
@@ -327,7 +272,7 @@ export default function FeynmanPage() {
   ) => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/coach", {
+      const res = await authFetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: history, concept: conceptStr, session_id: currentSessionId }),
@@ -341,6 +286,7 @@ export default function FeynmanPage() {
       if (data.done) {
         setCoachingDone(true);
         setStage(3);
+        refresh();
         if (data.praise) {
           setMessages((prev) => [...prev, { role: "ai", content: data.praise }]);
           setApiMessages((prev) => [...prev, { role: "assistant", content: data.praise }]);

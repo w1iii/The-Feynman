@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser } from '../../../lib/supabase/auth-helper'
+import { getCached, setCached, CacheKeys, CacheTTLs } from '../../../lib/redis/cache'
 
 export async function GET(
   request: NextRequest,
@@ -9,52 +10,59 @@ export async function GET(
   const { user, supabase, error } = await requireUser()
   if (error) return error
 
-  // Fetch session and verify ownership
-  const { data: session, error: sessionError } = await supabase
-    .from('sessions')
-    .select('*')
-    .eq('id', sessionId)
-    .eq('user_id', user.id)
-    .single()
+  const cacheKey = CacheKeys.sessionDetail(sessionId)
+  const cached = await getCached(cacheKey)
+  if (cached) {
+    return NextResponse.json(cached)
+  }
 
-  if (sessionError || !session) {
+  const [sessionResult, messagesResult, criteriaResult] = await Promise.all([
+    supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .eq('user_id', user.id)
+      .single(),
+    supabase
+      .from('messages')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('turn_number', { ascending: true }),
+    supabase
+      .from('criteria_results')
+      .select('criterion_index, passed')
+      .eq('session_id', sessionId)
+      .order('criterion_index', { ascending: true }),
+  ])
+
+  if (sessionResult.error || !sessionResult.data) {
     return NextResponse.json(
       { error: 'Session not found or unauthorized' },
       { status: 404 }
     )
   }
 
-  // Fetch messages for this session
-  const { data: messages, error: messagesError } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('turn_number', { ascending: true })
-
-  if (messagesError) {
+  if (messagesResult.error) {
     return NextResponse.json(
       { error: 'Failed to load messages' },
       { status: 500 }
     )
   }
 
-  // Fetch criteria results
-  const { data: criteriaResults, error: criteriaError } = await supabase
-    .from('criteria_results')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('criterion_index', { ascending: true })
-
-  if (criteriaError) {
+  if (criteriaResult.error) {
     return NextResponse.json(
       { error: 'Failed to load criteria results' },
       { status: 500 }
     )
   }
 
-  return NextResponse.json({
-    session,
-    messages: messages ?? [],
-    criteria_results: criteriaResults ?? [],
-  })
+  const response = {
+    session: sessionResult.data,
+    messages: messagesResult.data ?? [],
+    criteria_results: criteriaResult.data ?? [],
+  }
+
+  await setCached(cacheKey, response, CacheTTLs.sessionDetail)
+
+  return NextResponse.json(response)
 }

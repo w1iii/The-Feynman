@@ -11,7 +11,15 @@ export function getRedisClient() {
       return null
     }
 
-    redis = new Redis({ url, token })
+    redis = new Redis({
+      url,
+      token,
+      fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 2000)
+        return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeout))
+      },
+    } as any)
   }
 
   return redis

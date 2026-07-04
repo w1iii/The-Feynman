@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeClient } from '../../../lib/stripe/client'
-import { createClient } from '../../../lib/supabase/server'
+import { requireUser } from '../../../lib/supabase/auth-helper'
 
 export async function POST(request: NextRequest) {
   try {
     const stripe = getStripeClient()
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, supabase, error } = await requireUser()
+    if (error) return error
 
     const body = await request.json()
     const priceId = body.priceId
@@ -23,7 +19,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('stripe_customer_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError) {
@@ -38,7 +34,7 @@ export async function POST(request: NextRequest) {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ stripe_customer_id: customerId })
-        .eq('id', user.id)
+        .eq('user_id', user.id)
 
       if (updateError) console.error('Failed to persist stripe_customer_id', updateError)
     }

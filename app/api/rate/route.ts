@@ -1,15 +1,12 @@
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
-import { createClient } from "../../lib/supabase/server";
+import { requireUser } from "../../lib/supabase/auth-helper";
+import { invalidateUserSessionsAndStats, invalidateSessionCache } from "../../lib/redis/cache";
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { user, supabase, error } = await requireUser();
+    if (error) return error;
 
     const { concept, finalExplanation, session_id }: { 
       concept: string; 
@@ -114,6 +111,9 @@ export async function POST(req: Request) {
           score_description: parsed.description,
         })
         .eq('id', session_id);
+
+      await invalidateUserSessionsAndStats(user.id);
+      await invalidateSessionCache(session_id);
     }
 
     return NextResponse.json({

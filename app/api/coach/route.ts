@@ -1,7 +1,7 @@
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { requireUser } from "../../lib/supabase/auth-helper";
-import { invalidateUserSessionsAndStats } from "../../lib/redis/cache";
+import { invalidateUserSessionsAndStats, invalidateSessionCache } from "../../lib/redis/cache";
 
 type Message = {
   role: "user" | "assistant";
@@ -117,39 +117,52 @@ export async function POST(req: Request) {
       );
     }
 
-    // Save messages to database on every turn
-    // First, delete existing messages for this session to avoid conflicts
-    await supabase
+    // Append-only: get current turn count, insert only new messages
+    const { count: existingCount } = await supabase
       .from('messages')
-      .delete()
+      .select('id', { count: 'exact', head: true })
       .eq('session_id', session_id);
 
-    const messagesToInsert = messages.map((msg, index) => ({
-      session_id: session_id,
-      role: msg.role,
-      content: msg.content,
-      turn_number: index + 1,
-    }));
+    const nextTurn = (existingCount ?? 0) + 1;
+    const newMessages = [];
 
-    // Add the assistant's response as a message
-    const assistantContent = parsed.done 
+    // Only insert user messages not yet persisted
+    for (let i = 0; i < messages.length; i++) {
+      const turnNumber = i + 1;
+      if (turnNumber >= nextTurn) {
+        newMessages.push({
+          session_id,
+          role: messages[i].role,
+          content: messages[i].content,
+          turn_number: turnNumber,
+        });
+      }
+    }
+
+    // Add assistant response
+    const assistantContent = parsed.done
       ? (parsed.praise || "Great job completing the session!")
       : (parsed.question || "Could you tell me more about that?");
 
-    messagesToInsert.push({
-      session_id: session_id,
+    newMessages.push({
+      session_id,
       role: "assistant",
       content: assistantContent,
       turn_number: messages.length + 1,
     });
 
-    const { error: insertError } = await supabase
-      .from('messages')
-      .insert(messagesToInsert);
+    if (newMessages.length > 0) {
+      const { error: insertError } = await supabase
+        .from('messages')
+        .insert(newMessages);
 
-    if (insertError) {
-      console.error("Failed to save messages:", insertError);
+      if (insertError) {
+        console.error("Failed to save messages:", insertError);
+      }
     }
+
+    // Invalidate session detail cache since messages changed
+    await invalidateSessionCache(session_id);
 
     // If conversation is done, save criteria results and update session
     if (parsed.done) {

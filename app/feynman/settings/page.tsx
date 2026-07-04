@@ -1,31 +1,9 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "../../lib/supabase/client";
-import "./page.css";
-
-type User = {
-  id: string;
-  email: string;
-  user_metadata?: {
-    full_name?: string;
-  };
-};
-
-type Profile = {
-  plan: string;
-  display_name: string;
-};
-
-type Stats = {
-  total_sessions: number;
-  completed_sessions: number;
-  avg_score: number;
-  best_score: number;
-  completion_rate: number;
-  unique_concepts: number;
-  recent_concepts: string[];
-};
+import { authFetch } from "../../lib/api/client";
+import { useUser } from "../../lib/context/user-context";
 
 type Billing = {
   total_sessions: number;
@@ -47,78 +25,26 @@ function formatDate(dateStr: string) {
 }
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [_billing, setBilling] = useState<Billing | null>(null);
-  const [, startTransition] = useTransition();
+  const { user, profile, sessions, stats, loading, refresh } = useUser();
+  const [billing, setBilling] = useState<Billing | null>(null);
+  const [billingLoading, setBillingLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sessions, setSessions] = useState<Array<{ id: string; concept: string; created_at: string; status: string }>>([]);
 
   const [displayName, setDisplayName] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [billingLoading, setBillingLoading] = useState(true);
-
-  const fetchUserData = async () => {
-    try {
-      const supabase = createClient();
-
-      const [userResult, profileRes, statsRes, billingRes, sessionsRes] = await Promise.all([
-        supabase.auth.getUser(),
-        fetch("/api/profile"),
-        fetch("/api/stats"),
-        fetch("/api/billing"),
-        fetch("/api/getsession"),
-      ]);
-
-      const { data: { user }, error: authError } = userResult;
-
-      if (authError || !user) {
-        setStatsLoading(false);
-        setBillingLoading(false);
-        return;
-      }
-
-      setUser(user as User);
-      setDisplayName(user.user_metadata?.full_name || "");
-
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-        setProfile({
-          plan: profileData.plan || "free",
-          display_name: profileData.display_name || "",
-        });
-      }
-
-      if (billingRes && billingRes.ok) {
-        const billingData = await billingRes.json();
-        setBilling(billingData);
-      }
-      setBillingLoading(false);
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
-      setStatsLoading(false);
-
-      if (sessionsRes.ok) {
-        const sessionsData = await sessionsRes.json();
-        if (sessionsData.sessions) setSessions(sessionsData.sessions);
-      }
-    } catch (err) {
-      console.log("Error fetching user:", err);
-      setStatsLoading(false);
-      setBillingLoading(false);
-    }
+  const startEditing = () => {
+    setDisplayName(user?.user_metadata?.full_name || "");
+    setIsEditingName(true);
   };
 
   useEffect(() => {
-    startTransition(() => { fetchUserData(); });
+    authFetch("/api/billing").then(res => res.ok && res.json()).then(data => {
+      if (data) setBilling(data);
+      setBillingLoading(false);
+    }).catch(() => setBillingLoading(false));
   }, []);
 
   const handleLogout = async () => {
@@ -134,7 +60,7 @@ export default function SettingsPage() {
     setSaveMessage(null);
 
     try {
-      const res = await fetch("/api/profile", {
+      const res = await authFetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ display_name: displayName.trim() }),
@@ -145,13 +71,8 @@ export default function SettingsPage() {
         throw new Error(errData.error || "Failed to update name");
       }
 
-      const data = await res.json();
-      setProfile(prev => prev ? { ...prev, display_name: data.display_name } : null);
-      setUser(prev => prev ? {
-        ...prev,
-        user_metadata: { ...prev.user_metadata, full_name: data.display_name }
-      } : null);
       setIsEditingName(false);
+      refresh();
       setSaveMessage({ type: "success", text: "Name updated successfully" });
     } catch (err) {
       setSaveMessage({ type: "error", text: err instanceof Error ? err.message : "Failed to update name" });
@@ -172,7 +93,7 @@ export default function SettingsPage() {
 
   const deleteSession = async (sessionIdToDelete: string) => {
     try {
-      const res = await fetch(`/api/deletesession/${sessionIdToDelete}`, {
+      const res = await authFetch(`/api/deletesession/${sessionIdToDelete}`, {
         method: 'DELETE'
       });
 
@@ -181,7 +102,7 @@ export default function SettingsPage() {
         throw new Error(errData.error || "Failed to delete session");
       }
 
-      setSessions(prev => prev.filter(s => s.id !== sessionIdToDelete));
+      refresh();
     } catch (err) {
       console.log("Error deleting session:", err);
     }
@@ -339,7 +260,7 @@ export default function SettingsPage() {
                 ) : (
                   <div className="flex justify-between items-center">
                     <span className="font-display text-[18px] text-on-background">{user?.user_metadata?.full_name || "Not set"}</span>
-                    <button className="flex items-center gap-1.5 text-primary font-body text-[11px] tracking-[0.1em] hover:underline" onClick={() => setIsEditingName(true)}>
+                    <button className="flex items-center gap-1.5 text-primary font-body text-[11px] tracking-[0.1em] hover:underline" onClick={startEditing}>
                       <span className="material-symbols-outlined text-[16px]">edit</span>
                       Edit
                     </button>
@@ -392,7 +313,7 @@ export default function SettingsPage() {
                         className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-primary bg-primary hover:bg-[#0d3323] transition-colors"
                         onClick={async () => {
                           try {
-                            const res = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID }) });
+                            const res = await authFetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID }) });
                             const data = await res.json();
                             if (data.url) window.location.href = data.url;
                             else alert(data.error || "Failed to create checkout");
@@ -408,7 +329,7 @@ export default function SettingsPage() {
                         className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-surface-variant border border-outline-variant/40 hover:bg-outline-variant/10 transition-colors"
                         onClick={async () => {
                           try {
-                            const res = await fetch("/api/billing/portal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+                            const res = await authFetch("/api/billing/portal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
                             const data = await res.json();
                             if (data.url) window.location.href = data.url;
                             else alert(data.error || "Failed to open billing portal");
@@ -429,7 +350,7 @@ export default function SettingsPage() {
           {/* Stats Section */}
           <section className="mb-8">
             <h2 className="font-body text-[10px] text-on-surface-variant/50 uppercase tracking-[0.15em] mb-3 pb-2 border-b border-outline-variant/20">Learning Stats</h2>
-            {statsLoading ? (
+            {loading ? (
               <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)] flex items-center justify-center gap-3">
                 <div className="w-5 h-5 border-2 border-outline-variant/40 border-t-primary rounded-full animate-spin" />
                 <span className="font-body text-[13px] text-on-surface-variant/60">Loading stats...</span>

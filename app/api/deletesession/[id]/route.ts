@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser } from '../../../lib/supabase/auth-helper'
-import { invalidateUserSessionsAndStats } from '../../../lib/redis/cache'
+import { invalidateUserSessionsAndStats, invalidateSessionCache } from '../../../lib/redis/cache'
 
 export async function DELETE(
   request: NextRequest,
@@ -63,6 +63,7 @@ export async function DELETE(
 
   // Invalidate cached sessions and stats
   await invalidateUserSessionsAndStats(user.id)
+  await invalidateSessionCache(sessionIdToDelete)
 
   return NextResponse.json({
     messages: 'Session Deleted', 

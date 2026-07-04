@@ -12,19 +12,11 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json(cached)
   }
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('plan')
-      .eq('id', user.id)
-      .single()
-
-  if (profileError) {
-    console.error('Profile fetch error:', profileError)
-    return NextResponse.json(
-      { error: profileError.message },
-      { status: 500 }
-    )
-  }
+      .eq('user_id', user.id)
+      .maybeSingle()
 
   const response = {
     plan: profile?.plan || 'free',
