@@ -9,6 +9,7 @@ export async function GET(_request: NextRequest) {
   const cacheKey = CacheKeys.stats(user.id)
   const cached = await getCached(cacheKey)
   if (cached) {
+    console.log("Returning from cache", cached)
     return NextResponse.json(cached)
   }
 
