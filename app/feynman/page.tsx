@@ -611,16 +611,17 @@ export default function FeynmanPage() {
                 if (!msg?.content) return null;
                 if (msg.role === "ai" && msg.content.startsWith("__SCORE__")) return null;
                 return msg.role === "ai" ? (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="w-[3px] min-h-[18px] bg-primary flex-shrink-0 mt-1.5 rounded-full" />
-                    <p className="msg-ai-text font-display italic text-on-surface-variant/80 leading-[1.7] max-w-[700px]">{msg.content}</p>
+                  <div key={i} className="flex justify-start max-w-[80%]">
+                    <p className="msg-ai-text font-display italic text-on-surface-variant/90 leading-[1.7] bg-surface-container-low rounded-2xl rounded-bl-sm px-5 py-3 border-l-[3px] border-primary">{msg.content}</p>
                   </div>
                 ) : (
-                  <p key={i} className="msg-user font-display font-light text-on-background leading-[1.6] pl-4">{msg.content}</p>
+                  <div key={i} className="flex justify-end">
+                    <p className="msg-user font-display font-light text-on-background leading-[1.6] bg-primary/10 rounded-2xl rounded-br-sm px-5 py-3 max-w-[80%]">{msg.content}</p>
+                  </div>
                 );
               })}
               {isLoading && (
-                <div className="flex gap-1.5 items-center pl-4">
+                <div className="flex gap-1.5 items-center">
                   <span className="w-[5px] h-[5px] bg-outline-variant rounded-full" />
                   <span className="w-[5px] h-[5px] bg-outline-variant rounded-full" />
                   <span className="w-[5px] h-[5px] bg-outline-variant rounded-full" />
@@ -635,7 +636,7 @@ export default function FeynmanPage() {
                 <div className="flex flex-col gap-4">
                   <textarea
                     ref={textareaRef}
-                    className="w-full bg-transparent border-0 border-b border-primary/10 focus:border-primary focus:ring-0 text-[clamp(17px,2vw,22px)] font-display placeholder:text-outline-variant/30 placeholder:italic transition-all duration-500 resize-none py-3 no-scrollbar"
+                    className="w-full bg-transparent border-0 border-b border-primary/10 focus:border-primary focus:ring-0 focus:outline-none text-[clamp(17px,2vw,22px)] font-display placeholder:text-outline-variant/30 placeholder:italic transition-all duration-500 resize-none py-3 no-scrollbar"
                     value={input}
                     onChange={(e) => handleInputChange(e.target.value)}
                     onKeyDown={handleKeyDown}
