@@ -1,14 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import { authFetch } from "../../lib/api/client";
 import { useUser } from "../../lib/context/user-context";
 import "../page.css";
-
-type Billing = {
-  total_sessions: number;
-};
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr);
@@ -27,8 +23,6 @@ function formatDate(dateStr: string) {
 
 export default function SettingsPage() {
   const { user, profile, sessions, stats, loading, refresh } = useUser();
-  const [billing, setBilling] = useState<Billing | null>(null);
-  const [billingLoading, setBillingLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [displayName, setDisplayName] = useState("");
@@ -40,13 +34,6 @@ export default function SettingsPage() {
     setDisplayName(user?.user_metadata?.full_name || "");
     setIsEditingName(true);
   };
-
-  useEffect(() => {
-    authFetch("/api/billing").then(res => res.ok && res.json()).then(data => {
-      if (data) setBilling(data);
-      setBillingLoading(false);
-    }).catch(() => setBillingLoading(false));
-  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -302,62 +289,23 @@ export default function SettingsPage() {
           {/* Billing Section */}
           <section className="mb-8">
             <h2 className="font-body text-[10px] text-on-surface-variant/50 uppercase tracking-[0.15em] mb-3 pb-2 border-b border-outline-variant/20">Billing</h2>
-            {billingLoading ? (
-              <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)] flex items-center justify-center gap-3">
-                <div className="w-5 h-5 border-2 border-outline-variant/40 border-t-primary rounded-full animate-spin" />
-                <span className="font-body text-[13px] text-on-surface-variant/60">Loading billing...</span>
-              </div>
-            ) : (
-              <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)]">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div>
-                    <div className="font-body text-[11px] text-on-surface-variant/50 mb-1 uppercase tracking-[0.08em]">Plan</div>
-                    <span className={`inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase ${
-                      profile?.plan === "free"
-                        ? "bg-outline-variant/20 text-on-surface-variant/60"
-                        : "bg-primary/10 text-primary"
-                    }`}>
-                      {profile?.plan || "Free"}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    {profile?.plan === "free" ? (
-                      <button
-                        className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-primary bg-primary hover:bg-[#0d3323] transition-colors"
-                        onClick={async () => {
-                          try {
-                            const res = await authFetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID }) });
-                            const data = await res.json();
-                            if (data.url) window.location.href = data.url;
-                            else alert(data.error || "Failed to create checkout");
-                          } catch {
-                            alert("Failed to start checkout");
-                          }
-                        }}
-                      >
-                        Upgrade
-                      </button>
-                    ) : (
-                      <button
-                        className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-surface-variant border border-outline-variant/40 hover:bg-outline-variant/10 transition-colors"
-                        onClick={async () => {
-                          try {
-                            const res = await authFetch("/api/billing/portal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-                            const data = await res.json();
-                            if (data.url) window.location.href = data.url;
-                            else alert(data.error || "Failed to open billing portal");
-                          } catch {
-                            alert("Failed to open billing portal");
-                          }
-                        }}
-                      >
-                        Manage Subscription
-                      </button>
-                    )}
-                  </div>
+            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)]">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <div className="font-body text-[11px] text-on-surface-variant/50 mb-1 uppercase tracking-[0.08em]">Plan</div>
+                  <span className={`inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase ${
+                    profile?.plan === "free"
+                      ? "bg-outline-variant/20 text-on-surface-variant/60"
+                      : "bg-primary/10 text-primary"
+                  }`}>
+                    {profile?.plan || "Free"}
+                  </span>
                 </div>
               </div>
-            )}
+              <div className="mt-4 font-body text-[13px] text-on-surface-variant/50 italic">
+                Billing coming soon
+              </div>
+            </div>
           </section>
 
           {/* Stats Section */}
