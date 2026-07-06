@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
 import { authFetch } from "../lib/api/client";
 import { useUser } from "../lib/context/user-context";
@@ -38,6 +39,14 @@ const CRITERIA_LABELS = [
 
 export default function FeynmanPage() {
   const { user, profile, sessions, loading, refresh } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/");
+    }
+  }, [loading, user, router]);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [concept, setConcept] = useState("");
