@@ -260,7 +260,11 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <div className="flex justify-between items-center">
-                    <span className="font-display text-[18px] text-on-background">{user?.user_metadata?.full_name || "Not set"}</span>
+                    {loading ? (
+                      <div className="animate-pulse bg-outline-variant/20 rounded h-5 w-36" />
+                    ) : (
+                      <span className="font-display text-[18px] text-on-background">{user?.user_metadata?.full_name || "Not set"}</span>
+                    )}
                     <button className="flex items-center gap-1.5 text-primary font-body text-[11px] tracking-[0.1em] hover:underline" onClick={startEditing}>
                       <span className="material-symbols-outlined text-[16px]">edit</span>
                       Edit
@@ -271,18 +275,26 @@ export default function SettingsPage() {
 
               <div className="mb-5">
                 <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Email</label>
-                <span className="font-display text-[16px] text-on-background">{user?.email || "No email"}</span>
+                {loading ? (
+                  <div className="animate-pulse bg-outline-variant/20 rounded h-4 w-52" />
+                ) : (
+                  <span className="font-display text-[16px] text-on-background">{user?.email || "No email"}</span>
+                )}
               </div>
 
               <div>
                 <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Plan</label>
-                <span className={`inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase ${
-                  profile?.plan === "free"
-                    ? "bg-outline-variant/20 text-on-surface-variant/60"
-                    : "bg-primary/10 text-primary"
-                }`}>
-                  {profile?.plan || "Free"} Plan
-                </span>
+                {loading ? (
+                  <div className="animate-pulse bg-outline-variant/20 rounded-full h-5 w-16" />
+                ) : (
+                  <span className={`inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase ${
+                    profile?.plan === "free"
+                      ? "bg-outline-variant/20 text-on-surface-variant/60"
+                      : "bg-primary/10 text-primary"
+                  }`}>
+                    {profile?.plan || "Free"} Plan
+                  </span>
+                )}
               </div>
             </div>
           </section>

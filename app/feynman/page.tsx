@@ -37,7 +37,7 @@ const CRITERIA_LABELS = [
 ];
 
 export default function FeynmanPage() {
-  const { user, profile, sessions, refresh } = useUser();
+  const { user, profile, sessions, loading, refresh } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [concept, setConcept] = useState("");
@@ -378,15 +378,25 @@ export default function FeynmanPage() {
         {/* Profile */}
         <div className="px-8 mb-12">
           <div className="flex flex-col gap-1">
-            <span className="text-[20px] font-display italic text-primary leading-tight">
-              {user?.user_metadata?.full_name || "User"}
-            </span>
-            <span className="text-[11px] font-body text-on-surface-variant/60 tracking-wider">
-              {user?.email || ""}
-            </span>
-            <div className="mt-4 px-3 py-1 inline-block border border-outline-variant/30 rounded-full text-[9px] font-bold tracking-widest text-on-surface-variant/50 w-fit uppercase">
-              {profile?.plan || "FREE"} PLAN
-            </div>
+            {loading ? (
+              <>
+                <div className="animate-pulse bg-outline-variant/20 rounded h-5 w-28" />
+                <div className="animate-pulse bg-outline-variant/10 rounded h-3 w-40 mt-1" />
+                <div className="mt-4 animate-pulse bg-outline-variant/20 rounded-full h-4 w-14" />
+              </>
+            ) : (
+              <>
+                <span className="text-[20px] font-display italic text-primary leading-tight">
+                  {user?.user_metadata?.full_name || "User"}
+                </span>
+                <span className="text-[11px] font-body text-on-surface-variant/60 tracking-wider">
+                  {user?.email || ""}
+                </span>
+                <div className="mt-4 px-3 py-1 inline-block border border-outline-variant/30 rounded-full text-[9px] font-bold tracking-widest text-on-surface-variant/50 w-fit uppercase">
+                  {profile?.plan || "FREE"} PLAN
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -406,7 +416,14 @@ export default function FeynmanPage() {
           <div className="px-8 mb-6 font-body text-[10px] text-outline-variant/60 uppercase tracking-[0.2em]">
             History
           </div>
-          {sessions.length === 0 ? (
+          {sessions.length === 0 && loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="px-8 py-3">
+                <div className="animate-pulse bg-outline-variant/20 rounded h-4 w-32 mb-1" />
+                <div className="animate-pulse bg-outline-variant/10 rounded h-3 w-16" />
+              </div>
+            ))
+          ) : sessions.length === 0 ? (
             <div className="px-8 font-body text-[13px] text-on-surface-variant/40 italic">
               No sessions yet
             </div>
