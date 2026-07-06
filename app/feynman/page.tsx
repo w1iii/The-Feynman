@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useTransition } from "react";
 import { createClient } from "../lib/supabase/client";
 import { authFetch } from "../lib/api/client";
 import { useUser } from "../lib/context/user-context";
+import "./page.css";
 
 type Message = {
   role: "ai" | "user";
@@ -488,7 +489,7 @@ export default function FeynmanPage() {
             <div className="relative group">
               <textarea
                 ref={textareaRef}
-                className="w-full min-h-[120px] bg-transparent border-0 border-b border-primary/10 focus:border-primary/10 focus:ring-0 text-[clamp(18px,2.5vw,24px)] font-display placeholder:text-outline-variant/30 placeholder:italic transition-all duration-700 resize-none py-6 text-center overflow-hidden no-scrollbar"
+                className="w-full min-h-[120px] bg-transparent border-0 border-b border-primary/10 focus:border-primary/10 focus:ring-0 focus:outline-none text-[clamp(16px,2vw,20px)] font-display font-light placeholder:text-outline-variant/30 placeholder:italic transition-all duration-700 resize-none py-6 text-center overflow-hidden no-scrollbar"
                 value={input}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -584,7 +585,7 @@ export default function FeynmanPage() {
                   <div className="flex flex-col items-center text-center bg-surface-container-lowest rounded-xl p-8 shadow-[0_2px_12px_rgba(20,66,45,0.1)]">
                     <div className="font-display text-[80px] text-primary leading-none mb-2">{data.score}</div>
                     <div className="font-body text-[14px] tracking-[0.16em] uppercase text-on-surface-variant mb-6">{data.label}</div>
-                    <p className="font-display text-[20px] italic text-on-background leading-relaxed max-w-[680px] mb-6">{data.description}</p>
+                    <p className="font-body text-[16px] text-on-background leading-relaxed max-w-[680px] mb-6">{data.description}</p>
                     <div className="flex flex-col gap-2 w-full max-w-md">
                       {data.strengths?.map((s: string, j: number) => (
                         <div key={j} className="flex items-center gap-3 font-display text-[18px] text-on-background">
@@ -615,7 +616,7 @@ export default function FeynmanPage() {
                     <p className="msg-ai-text font-display italic text-on-surface-variant/80 leading-[1.7] max-w-[700px]">{msg.content}</p>
                   </div>
                 ) : (
-                  <p key={i} className="msg-user font-display text-on-background leading-[1.6] pl-4">{msg.content}</p>
+                  <p key={i} className="msg-user font-display font-light text-on-background leading-[1.6] pl-4">{msg.content}</p>
                 );
               })}
               {isLoading && (

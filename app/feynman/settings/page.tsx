@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "../../lib/supabase/client";
 import { authFetch } from "../../lib/api/client";
 import { useUser } from "../../lib/context/user-context";
+import "../page.css";
 
 type Billing = {
   total_sessions: number;

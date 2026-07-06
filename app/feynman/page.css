@@ -43,15 +43,15 @@
   line-height: 1.7;
 }
 .msg-user {
-  font-size: 22px;
-  line-height: 1.5;
+  font-size: 18px;
+  line-height: 1.6;
 }
 @media (max-width: 640px) {
   .msg-ai-text {
     font-size: 16px;
   }
   .msg-user {
-    font-size: 18px;
+    font-size: 16px;
   }
 }
 
