@@ -192,7 +192,7 @@ export default function SettingsPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-grow ml-[280px] bg-[#f9f9f7] relative flex flex-col min-h-screen overflow-y-auto">
+      <main className="flex-grow ml-[280px] bg-[#f9f9f7] relative flex flex-col items-center min-h-screen overflow-y-auto">
         {/* Mobile hamburger */}
         <button
           className="fixed top-4 left-4 z-50 hidden max-lg:flex items-center justify-center w-10 h-10 bg-white border border-outline-variant/30 rounded-lg text-primary"
