@@ -111,7 +111,7 @@ export default function SettingsPage() {
       />
 
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-[280px] flex flex-col py-12 z-50 bg-transparent border-r border-outline-variant/20">
+      <aside className={`fixed left-0 top-0 h-full w-[280px] flex flex-col py-12 z-50 bg-background lg:bg-transparent border-r border-outline-variant/20 transition-transform duration-300 ease-in-out lg:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="px-8 mb-12">
           <div className="flex flex-col gap-1">
             <span className="text-[20px] font-display italic text-primary leading-tight">
@@ -185,13 +185,13 @@ export default function SettingsPage() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-grow ml-[280px] bg-[#f9f9f7] relative flex flex-col items-center min-h-screen overflow-y-auto">
+      <main className="flex-grow lg:ml-[280px] bg-[#f9f9f7] relative flex flex-col items-center min-h-screen overflow-y-auto">
         {/* Mobile hamburger */}
         <button
-          className="fixed top-4 left-4 z-50 hidden max-lg:flex items-center justify-center w-10 h-10 bg-white border border-outline-variant/30 rounded-lg text-primary"
+          className="fixed top-4 left-4 z-50 flex lg:hidden items-center justify-center w-10 h-10 bg-white border border-outline-variant/30 rounded-lg text-primary shadow-md"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          <span className="material-symbols-outlined text-[24px]">menu</span>
+          <span className="material-symbols-outlined text-[24px]">{mobileMenuOpen ? "close" : "menu"}</span>
         </button>
 
         {/* Header */}
