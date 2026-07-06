@@ -29,6 +29,12 @@ export default function SettingsPage() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const startEditing = () => {
     setDisplayName(user?.user_metadata?.full_name || "");
@@ -356,15 +362,67 @@ export default function SettingsPage() {
             <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)]">
               <div className="mb-5">
                 <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Change Password</label>
-                <button
-                  className="font-body text-[13px] text-primary hover:underline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert("Password reset feature coming soon!");
-                  }}
-                >
-                  Reset your password
-                </button>
+                {passwordSuccess ? (
+                  <p className="font-body text-[13px] text-on-surface-variant/70 italic">Password updated successfully.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {passwordError && (
+                      <p className="font-body text-[12px] text-error">{passwordError}</p>
+                    )}
+                    <input
+                      type="password"
+                      placeholder="Current password"
+                      className="w-full max-w-xs px-3.5 py-2 border border-outline-variant/50 rounded-lg font-body text-[14px] text-on-background bg-transparent focus:outline-none focus:border-primary transition-colors"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
+                    <input
+                      type="password"
+                      placeholder="New password"
+                      className="w-full max-w-xs px-3.5 py-2 border border-outline-variant/50 rounded-lg font-body text-[14px] text-on-background bg-transparent focus:outline-none focus:border-primary transition-colors"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      minLength={6}
+                    />
+                    <input
+                      type="password"
+                      placeholder="Confirm new password"
+                      className="w-full max-w-xs px-3.5 py-2 border border-outline-variant/50 rounded-lg font-body text-[14px] text-on-background bg-transparent focus:outline-none focus:border-primary transition-colors"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      minLength={6}
+                    />
+                    <button
+                      className="w-fit px-4 py-2 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-primary bg-primary hover:bg-[#0d3323] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
+                      onClick={async () => {
+                        setPasswordError("");
+                        if (newPassword !== confirmPassword) {
+                          setPasswordError("Passwords do not match");
+                          return;
+                        }
+                        if (newPassword.length < 6) {
+                          setPasswordError("Password must be at least 6 characters");
+                          return;
+                        }
+                        setPasswordLoading(true);
+                        const supabase = createClient();
+                        const { error } = await supabase.auth.updateUser({ password: newPassword });
+                        setPasswordLoading(false);
+                        if (error) {
+                          setPasswordError(error.message);
+                        } else {
+                          setPasswordSuccess(true);
+                          setCurrentPassword("");
+                          setNewPassword("");
+                          setConfirmPassword("");
+                        }
+                      }}
+                    >
+                      {passwordLoading ? "Updating..." : "Update password"}
+                    </button>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">Sign Out</label>
