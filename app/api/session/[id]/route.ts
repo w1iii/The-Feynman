@@ -7,6 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: sessionId } = await params
+  if (!sessionId) {
+    return NextResponse.json({ error: 'Session ID required' }, { status: 400 })
+  }
+
   const { user, supabase, error } = await requireUser()
   if (error) return error
 

@@ -70,7 +70,10 @@ export default function FeynmanPage() {
   const scoreSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = document.querySelector('.chat-area');
+    if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 60) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, isLoading]);
 
   useEffect(() => {
@@ -202,7 +205,6 @@ export default function FeynmanPage() {
         } else {
           throw new Error(errData.error || "Failed to create session");
         }
-        setIsLoading(false);
         return;
       }
       const sessionData = await sessionRes.json();
@@ -542,7 +544,7 @@ export default function FeynmanPage() {
           <div className="max-w-writing-well w-full flex-grow flex flex-col px-gutter py-8 fade-in">
             {/* Error */}
             {error && (
-              <div className="error-message rounded-lg p-4 mb-6 flex justify-between items-center">
+              <div className="error-message rounded-lg p-4 mb-6 flex justify-between items-center" role="alert">
                 <p className="text-error text-[14px] font-body">{error}</p>
                 <button onClick={() => setError(null)} className="text-error underline text-[13px] font-body">Dismiss</button>
               </div>

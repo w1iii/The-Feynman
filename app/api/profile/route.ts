@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser } from '../../lib/supabase/auth-helper'
 import { getCached, setCached, CacheKeys, CacheTTLs, invalidateCache } from '../../lib/redis/cache'
-import { console } from 'inspector'
-
 export async function GET(_request: NextRequest) {
   const { user, supabase, error } = await requireUser()
   if (error) return error
@@ -10,7 +8,6 @@ export async function GET(_request: NextRequest) {
   const cacheKey = CacheKeys.profile(user.id)
   const cached = await getCached(cacheKey)
   if (cached) {
-    console.log("Returning from cache", cached)
     return NextResponse.json(cached)
   }
 

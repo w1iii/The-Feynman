@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "./lib/supabase/client";
@@ -93,8 +94,8 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="w-full max-w-[900px] h-[300px] sm:h-[400px] rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.1)] border border-outline-variant/20">
-            <img src="/image.jpg" alt="Feynman learning" className="w-full h-full object-cover" />
+          <div className="relative w-full max-w-[900px] h-[300px] sm:h-[400px] rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.1)] border border-outline-variant/20">
+            <Image src="/image.jpg" alt="Feynman learning" fill className="object-cover" sizes="(max-width: 640px) 100vw, 900px" />
           </div>
         </section>
 
@@ -142,8 +143,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="w-full h-[300px] sm:h-[400px] rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.1)] border border-outline-variant/20">
-            <img src="/image.jpg" alt="Learning space" className="w-full h-full object-cover" />
+          <div className="relative w-full h-[300px] sm:h-[400px] rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.1)] border border-outline-variant/20">
+            <Image src="/image.jpg" alt="Learning space" fill className="object-cover" sizes="(max-width: 640px) 100vw, 600px" />
           </div>
         </section>
 

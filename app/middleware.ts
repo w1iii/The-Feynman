@@ -7,6 +7,10 @@ const publicRoutes = ['/', '/signup', '/login']
 export async function middleware(request: NextRequest) {
   const supabaseResponse = NextResponse.next({ request })
   
+  supabaseResponse.headers.set('X-Frame-Options', 'DENY')
+  supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff')
+  supabaseResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

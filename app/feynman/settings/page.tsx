@@ -98,7 +98,7 @@ export default function SettingsPage() {
 
       refresh();
     } catch (err) {
-      console.log("Error deleting session:", err);
+      console.error("Error deleting session:", err);
     }
   };
 

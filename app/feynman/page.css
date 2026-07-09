@@ -23,11 +23,11 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #c0c9c1;
+  background: var(--color-outline-variant);
   border-radius: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #717973;
+  background: var(--color-outline);
 }
 
 /* Chat messages */
