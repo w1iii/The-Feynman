@@ -53,7 +53,7 @@ export async function POST(req: Request) {
 
     try {
       response = await client.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [
           { role: "system", content: systemInstruction },
           { 
@@ -65,13 +65,13 @@ export async function POST(req: Request) {
         temperature: 0.3,
       });
     } catch (primaryError: unknown) {
-      // Check for rate limit (429) error
+      // Check for rate limit (429) or model not found (404) error
       const err = primaryError as { status?: number; message?: string }
-      if (err?.status === 429 || err?.message?.includes('rate_limit')) {
-        console.warn("Primary model rate limited, falling back to llama-3.1-8b-instant");
+      if (err?.status === 429 || err?.status === 404 || err?.message?.includes('rate_limit') || err?.message?.includes('model_not_found')) {
+        console.warn("Primary model unavailable, falling back to openai/gpt-oss-20b");
         
         response = await client.chat.completions.create({
-          model: "llama-3.1-8b-instant",
+          model: "openai/gpt-oss-20b",
           messages: [
             { role: "system", content: systemInstruction },
             { 
