@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "../../lib/supabase/client";
-import { authFetch } from "../../lib/api/client";
+import { authFetch, clearTokenCache } from "../../lib/api/client";
 import { useUser } from "../../lib/context/user-context";
 import "../page.css";
 
@@ -42,6 +42,7 @@ export default function SettingsPage() {
   };
 
   const handleLogout = async () => {
+    clearTokenCache();
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = "/";

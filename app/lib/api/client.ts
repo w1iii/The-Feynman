@@ -11,6 +11,10 @@ function getAccessToken(): Promise<string | undefined> {
   return tokenPromise;
 }
 
+export function clearTokenCache() {
+  tokenPromise = null;
+}
+
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = await getAccessToken();
   const headers = new Headers(options.headers);

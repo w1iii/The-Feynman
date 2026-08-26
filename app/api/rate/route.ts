@@ -103,17 +103,28 @@ export async function POST(req: Request) {
 
     // Persist score to sessions table
     if (session_id) {
-      await supabase
+      // Verify session belongs to user before updating
+      const { data: ownedSession } = await supabase
         .from('sessions')
-        .update({
-          final_score: parsed.score,
-          score_label: parsed.label,
-          score_description: parsed.description,
-        })
-        .eq('id', session_id);
+        .select('id')
+        .eq('id', session_id)
+        .eq('user_id', user.id)
+        .single();
 
-      await invalidateUserSessionsAndStats(user.id);
-      await invalidateSessionCache(session_id);
+      if (ownedSession) {
+        await supabase
+          .from('sessions')
+          .update({
+            final_score: parsed.score,
+            score_label: parsed.label,
+            score_description: parsed.description,
+          })
+          .eq('id', session_id)
+          .eq('user_id', user.id);
+
+        await invalidateUserSessionsAndStats(user.id);
+        await invalidateSessionCache(session_id);
+      }
     }
 
     return NextResponse.json({

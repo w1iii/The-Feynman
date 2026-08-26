@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
 
   const isPro = profile?.plan === 'pro'
 
-  // Check daily usage limit only for non-pro users
+  // Check and increment daily usage BEFORE creating session (non-pro only)
   if (!isPro) {
     const today = new Date().toISOString().split('T')[0]
-    
+
     const { data: usage } = await supabase
       .from('daily_usage')
       .select('sessions_used')
@@ -41,9 +41,30 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    // Increment usage atomically before session creation
+    const { error: rpcError } = await supabase.rpc('increment_daily_usage', {
+      p_user_id: user.id,
+    })
+
+    if (rpcError) {
+      // Fallback if RPC function doesn't exist yet
+      console.error('RPC increment_daily_usage failed, using fallback:', rpcError)
+      if (usage) {
+        await supabase
+          .from('daily_usage')
+          .update({ sessions_used: usage.sessions_used + 1 })
+          .eq('user_id', user.id)
+          .eq('date', today)
+      } else {
+        await supabase
+          .from('daily_usage')
+          .insert({ user_id: user.id, date: today, sessions_used: 1 })
+      }
+    }
   }
 
-  // Create session
+  // Create session after rate limit check passes
   const { data, error: sessionError } = await supabase
     .from('sessions')
     .insert({
@@ -60,37 +81,6 @@ export async function POST(request: NextRequest) {
       { error: sessionError.message },
       { status: 500 }
     )
-  }
-
-  // Increment daily usage atomically for non-pro users
-  if (!isPro) {
-    const { error: rpcError } = await supabase.rpc('increment_daily_usage', {
-      p_user_id: user.id,
-    })
-
-    if (rpcError) {
-      // Fallback if RPC function doesn't exist yet
-      console.error('RPC increment_daily_usage failed, using fallback:', rpcError)
-      const today = new Date().toISOString().split('T')[0]
-      const { data: usage } = await supabase
-        .from('daily_usage')
-        .select('sessions_used')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single()
-
-      if (usage) {
-        await supabase
-          .from('daily_usage')
-          .update({ sessions_used: usage.sessions_used + 1 })
-          .eq('user_id', user.id)
-          .eq('date', today)
-      } else {
-        await supabase
-          .from('daily_usage')
-          .insert({ user_id: user.id, date: today, sessions_used: 1 })
-      }
-    }
   }
 
   // Invalidate cached sessions and stats

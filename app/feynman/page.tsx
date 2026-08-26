@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
-import { authFetch } from "../lib/api/client";
+import { authFetch, clearTokenCache } from "../lib/api/client";
 import { useUser } from "../lib/context/user-context";
 import "./page.css";
 
@@ -155,6 +155,7 @@ export default function FeynmanPage() {
   }, []);
 
   const handleLogout = async () => {
+    clearTokenCache();
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = "/";

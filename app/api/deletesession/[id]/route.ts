@@ -36,6 +36,10 @@ export async function DELETE(
 
   if (messagesError) {
     console.error('Failed to delete messages:', messagesError)
+    return NextResponse.json(
+      { error: 'Failed to delete session messages.' },
+      { status: 500 }
+    )
   }
 
   // Delete related criteria results
@@ -46,6 +50,10 @@ export async function DELETE(
 
   if (criteriaError) {
     console.error('Failed to delete criteria results:', criteriaError)
+    return NextResponse.json(
+      { error: 'Failed to delete session criteria.' },
+      { status: 500 }
+    )
   }
 
   // Delete the session
