@@ -1,7 +1,7 @@
-import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { requireUser } from "../../lib/supabase/auth-helper";
 import { invalidateUserSessionsAndStats, invalidateSessionCache } from "../../lib/redis/cache";
+import { groqChat, parseJsonResponse } from "../../lib/ai/ai";
 
 type Message = {
   role: "user" | "assistant";
@@ -36,8 +36,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Session not found or unauthorized" }, { status: 403 });
     }
 
-    const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
     const systemInstruction = `
       You are a Feynman Technique coach helping the user understand: "${concept}".
       You are in an ongoing conversation — you remember everything said so far.
@@ -70,45 +68,21 @@ export async function POST(req: Request) {
       {"done": true, "passed": [0,1,2,3,4], "praise": "2–3 sentence specific praise referencing their actual words.", "gaps": []}
     `;
 
-    let response;
+    type CoachResponse = {
+      done: boolean;
+      passed: number[];
+      question?: string;
+      praise?: string;
+      gaps?: string[];
+    };
 
+    let parsed: CoachResponse;
     try {
-      // Try primary model first
-      response = await client.chat.completions.create({
-        model: "openai/gpt-oss-120b",
-        messages: [
-          { role: "system", content: systemInstruction },
-          ...messages,
-        ],
-        max_tokens: 300,
-        temperature: 0.4,
-      });
-    } catch (primaryError: unknown) {
-      // Check for rate limit (429) or model not found (404) error
-      const err = primaryError as { status?: number; message?: string }
-      if (err?.status === 429 || err?.status === 404 || err?.message?.includes('rate_limit') || err?.message?.includes('model_not_found')) {
-        console.warn("Primary model unavailable, falling back to openai/gpt-oss-20b");
-        
-        response = await client.chat.completions.create({
-          model: "openai/gpt-oss-20b",
-          messages: [
-            { role: "system", content: systemInstruction },
-            ...messages,
-          ],
-          max_tokens: 300,
-          temperature: 0.4,
-        });
-      } else {
-        throw primaryError;
-      }
-    }
-
-    // Parse response with error handling
-    let parsed;
-    try {
-      const raw = response.choices[0]?.message?.content ?? "";
-      const cleaned = raw.replace(/```json|```/g, "").trim();
-      parsed = JSON.parse(cleaned);
+      const response = await groqChat([
+        { role: "system", content: systemInstruction },
+        ...messages,
+      ]);
+      parsed = parseJsonResponse<CoachResponse>(response.choices[0]?.message?.content);
     } catch (parseError) {
       console.error("Failed to parse AI response:", parseError);
       return NextResponse.json(

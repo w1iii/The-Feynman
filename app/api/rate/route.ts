@@ -1,7 +1,7 @@
-import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 import { requireUser } from "../../lib/supabase/auth-helper";
 import { invalidateUserSessionsAndStats, invalidateSessionCache } from "../../lib/redis/cache";
+import { groqChat, parseJsonResponse } from "../../lib/ai/ai";
 
 export async function POST(req: Request) {
   try {
@@ -20,8 +20,6 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const systemInstruction = `
       You are evaluating a final Feynman explanation for depth of understanding.
@@ -49,50 +47,23 @@ export async function POST(req: Request) {
       }
     `;
 
-    let response;
+    type RateResponse = {
+      score: number;
+      label: string;
+      description: string;
+      strengths?: string[];
+    };
 
+    let parsed: RateResponse;
     try {
-      response = await client.chat.completions.create({
-        model: "openai/gpt-oss-120b",
-        messages: [
-          { role: "system", content: systemInstruction },
-          { 
-            role: "user", 
-            content: `Concept: "${concept}"\n\nFinal explanation:\n\n${finalExplanation}` 
-          }
-        ],
-        max_tokens: 300,
-        temperature: 0.3,
-      });
-    } catch (primaryError: unknown) {
-      // Check for rate limit (429) or model not found (404) error
-      const err = primaryError as { status?: number; message?: string }
-      if (err?.status === 429 || err?.status === 404 || err?.message?.includes('rate_limit') || err?.message?.includes('model_not_found')) {
-        console.warn("Primary model unavailable, falling back to openai/gpt-oss-20b");
-        
-        response = await client.chat.completions.create({
-          model: "openai/gpt-oss-20b",
-          messages: [
-            { role: "system", content: systemInstruction },
-            { 
-              role: "user", 
-              content: `Concept: "${concept}"\n\nFinal explanation:\n\n${finalExplanation}` 
-            }
-          ],
-          max_tokens: 300,
-          temperature: 0.3,
-        });
-      } else {
-        throw primaryError;
-      }
-    }
-
-    // Parse response with error handling
-    let parsed;
-    try {
-      const raw = response.choices[0]?.message?.content ?? "";
-      const cleaned = raw.replace(/```json|```/g, "").trim();
-      parsed = JSON.parse(cleaned);
+      const response = await groqChat([
+        { role: "system", content: systemInstruction },
+        { 
+          role: "user", 
+          content: `Concept: "${concept}"\n\nFinal explanation:\n\n${finalExplanation}` 
+        },
+      ], { temperature: 0.3 });
+      parsed = parseJsonResponse<RateResponse>(response.choices[0]?.message?.content);
     } catch (parseError) {
       console.error("Failed to parse AI response:", parseError);
       return NextResponse.json(
