@@ -64,6 +64,8 @@ export default function FeynmanPage() {
   const [charCount, setCharCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [coachingGaps, setCoachingGaps] = useState<string[]>([]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -191,18 +193,27 @@ export default function FeynmanPage() {
   const handleConceptSubmit = async () => {
     const trimmed = input.trim();
     if (!trimmed || trimmed.length < 3) return;
+    setConcept(trimmed);
+    setConceptConfirmed(true);
+    setInput("");
+    setCharCount(0);
+    setStage(2);
+    setMessages([{ role: "user", content: trimmed }]);
+  };
+
+  const handleReadyToExplain = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const sessionRes = await authFetch("/api/newsession", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ concept: trimmed }),
+        body: JSON.stringify({ concept }),
       });
       if (!sessionRes.ok) {
         const errData = await sessionRes.json();
         if (sessionRes.status === 403 && errData.upgrade) {
-          setError("Daily limit reached. Upgrade to Pro for unlimited sessions.");
+          setShowUpgradeModal(true);
         } else {
           throw new Error(errData.error || "Failed to create session");
         }
@@ -210,24 +221,28 @@ export default function FeynmanPage() {
       }
       const sessionData = await sessionRes.json();
       setSessionId(sessionData.id);
-      setConcept(trimmed);
-      setConceptConfirmed(true);
-      setInput("");
-      setCharCount(0);
-      setStage(2);
-      setMessages([{ role: "user", content: trimmed }]);
-      const opening = { role: "user" as const, content: `I want to explain: ${trimmed}` };
+      setStage(3);
+      refresh();
+      const opening = { role: "user" as const, content: `I want to explain: ${concept}` };
       const history = [opening];
       setApiMessages(history);
-      refresh();
-      await callCoach(trimmed, history, sessionData.id);
+      await callCoach(concept, history, sessionData.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-      setStage(1);
-      setConceptConfirmed(false);
+      setStage(2);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleChangeConcept = () => {
+    setConcept("");
+    setConceptConfirmed(false);
+    setMessages([]);
+    setApiMessages([]);
+    setInput("");
+    setCharCount(0);
+    setStage(1);
   };
 
   const handleExplanationSubmit = async () => {
@@ -298,6 +313,7 @@ export default function FeynmanPage() {
       setPassed(data.passed ?? []);
       if (data.done) {
         setCoachingDone(true);
+        setCoachingGaps(data.gaps ?? []);
         setStage(3);
         refresh();
         if (data.praise) {
@@ -335,6 +351,8 @@ export default function FeynmanPage() {
     setFinalSubmitted(false);
     setIsReviewMode(false);
     setError(null);
+    setShowUpgradeModal(false);
+    setCoachingGaps([]);
   };
 
   const handleInputChange = (val: string) => {
@@ -349,6 +367,8 @@ export default function FeynmanPage() {
   const handleSubmit = () => {
     if (!conceptConfirmed) {
       handleConceptSubmit();
+    } else if (stage === 2) {
+      handleReadyToExplain();
     } else if (coachingDone && !finalSubmitted) {
       handleFinalSubmit();
     } else if (!coachingDone) {
@@ -365,17 +385,25 @@ export default function FeynmanPage() {
 
   const submitDisabled =
     isLoading ||
-    input.trim().length < 3 ||
+    (stage === 1 && input.trim().length < 3) ||
     (coachingDone && !finalSubmitted && input.trim().split(/\s+/).length < 30) ||
     finalSubmitted;
 
-  const placeholder = !conceptConfirmed
+  const wordCount = input.trim() ? input.trim().split(/\s+/).length : 0;
+
+  const placeholder = stage === 2
+    ? ""
+    : !conceptConfirmed
     ? "Enter a concept…"
     : coachingDone && !finalSubmitted
     ? "Write your final, complete explanation… (min 30 words)"
     : "Write your explanation…";
 
   const isWritingWell = !conceptConfirmed && messages.length === 0 && !error;
+  const isStep2 = conceptConfirmed && stage === 2 && !coachingDone;
+
+  const dailyLimit = profile?.plan === "pro" ? null : 3;
+  const sessionsUsed = sessions.length;
 
   return (
     <div className="flex h-screen w-full bg-background text-on-background overflow-hidden selection:bg-primary/10 selection:text-primary">
@@ -407,6 +435,11 @@ export default function FeynmanPage() {
                 <div className="mt-4 px-3 py-1 inline-block border border-outline-variant/30 rounded-full text-[9px] font-bold tracking-widest text-on-surface-variant/50 w-fit uppercase">
                   {profile?.plan || "FREE"} PLAN
                 </div>
+                {dailyLimit && (
+                  <div className="mt-2 font-body text-[10px] text-on-surface-variant/40 tracking-wider">
+                    {Math.min(sessionsUsed, dailyLimit)} of {dailyLimit} sessions used today
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -540,6 +573,41 @@ export default function FeynmanPage() {
               </div>
             </div>
           </div>
+        ) : isStep2 ? (
+          /* ── Step 2: Study Reminder ── */
+          <div className="max-w-writing-well w-full flex-grow flex flex-col items-center justify-center px-gutter py-10 fade-in">
+            <div className="w-full max-w-[480px] text-center">
+              <div className="mb-8">
+                <span className="font-body text-[10px] tracking-[0.3em] uppercase text-on-surface-variant/40">
+                  You chose to explain
+                </span>
+              </div>
+              <div className="bg-primary/5 border border-primary/10 rounded-2xl px-8 py-6 mb-10">
+                <p className="font-display text-[clamp(24px,4vw,36px)] italic text-primary leading-tight">
+                  {concept}
+                </p>
+              </div>
+              <p className="font-display text-[clamp(16px,2.5vw,20px)] italic text-on-surface-variant/60 leading-relaxed mb-12 max-w-[400px] mx-auto">
+                When you&apos;re ready, explain this concept as if you&apos;re teaching a 12-year-old.
+              </p>
+              <div className="flex flex-col items-center gap-4">
+                <button
+                  onClick={handleReadyToExplain}
+                  disabled={isLoading}
+                  className="bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.4em] uppercase px-14 py-4 submit-btn-shadow active:scale-95 transition-all duration-500 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? "Starting..." : "I'M READY TO EXPLAIN"}
+                </button>
+                <button
+                  onClick={handleChangeConcept}
+                  disabled={isLoading}
+                  className="font-body text-[11px] tracking-[0.2em] uppercase text-on-surface-variant/40 hover:text-primary transition-colors duration-300 py-2"
+                >
+                  Change concept
+                </button>
+              </div>
+            </div>
+          </div>
         ) : (
           /* ── Session View ── */
           <div className="max-w-writing-well w-full flex-grow flex flex-col px-gutter py-8 fade-in">
@@ -582,6 +650,9 @@ export default function FeynmanPage() {
               const questionCount = messages.slice(0, scoreIndex).filter(m => m?.role === "user").length;
               const criteriaMet = passed.length;
               const statusReady = criteriaMet === 5;
+              const score = data.score || 0;
+              const circumference = 2 * Math.PI * 54;
+              const strokeDashoffset = circumference - (score / 100) * circumference;
               const encouragementMap: Record<string, string> = {
                 "Expert-level clarity": "Brilliant work! You've truly mastered this concept.",
                 "Strong understanding": "Great job! You have a solid grasp with room to refine.",
@@ -592,6 +663,7 @@ export default function FeynmanPage() {
               const encouragement = encouragementMap[data.label] || "Well done! Keep learning and growing.";
               return (
                 <div ref={scoreSectionRef} className="w-full pb-8 mb-6 border-b border-outline-variant/20">
+                  {/* Stats grid */}
                   <div className="grid grid-cols-3 gap-4 mb-6 max-sm:grid-cols-1">
                     <div className="bg-primary-container/80 rounded-xl p-5 text-center">
                       <div className="font-display text-[2rem] text-white mb-1">{criteriaMet}/5</div>
@@ -608,24 +680,73 @@ export default function FeynmanPage() {
                       <div className="font-body text-[10px] text-white/85 uppercase tracking-wider">Status</div>
                     </div>
                   </div>
+
+                  {/* Encouragement */}
                   <div className="bg-primary/8 border-l-4 border-primary rounded-r-lg p-4 mb-6">
                     <p className="font-display text-[18px] italic text-primary leading-tight">{encouragement}</p>
                   </div>
-                  <div className="flex flex-col items-center text-center bg-surface-container-lowest rounded-xl p-8 shadow-[0_2px_12px_rgba(20,66,45,0.1)]">
-                    <div className="font-display text-[80px] text-primary leading-none mb-2">{data.score}</div>
-                    <div className="font-body text-[14px] tracking-[0.16em] uppercase text-on-surface-variant mb-6">{data.label}</div>
-                    <p className="font-body text-[16px] text-on-background leading-relaxed max-w-[680px] mb-6">{data.description}</p>
-                    <div className="flex flex-col gap-2 w-full max-w-md">
-                      {data.strengths?.map((s: string, j: number) => (
-                        <div key={j} className="flex items-center gap-3 font-display text-[18px] text-on-background">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                          {s}
+
+                  {/* Per-criterion detail */}
+                  <div className="mb-6">
+                    <div className="font-body text-[10px] tracking-[0.15em] uppercase text-on-surface-variant/50 mb-3">Criteria Breakdown</div>
+                    <div className="flex flex-col gap-2">
+                      {CRITERIA_LABELS.map((label, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-surface-container-low border border-outline-variant/10">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${passed.includes(i) ? "bg-primary" : "bg-outline-variant/40"}`} />
+                          <span className={`font-body text-[13px] flex-1 ${passed.includes(i) ? "text-on-background" : "text-on-surface-variant/50"}`}>{label}</span>
+                          <span className={`font-body text-[10px] tracking-wider uppercase ${passed.includes(i) ? "text-primary" : "text-on-surface-variant/30"}`}>
+                            {passed.includes(i) ? "Passed" : "Not yet"}
+                          </span>
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Gap box (cap hit state) */}
+                  {coachingGaps.length > 0 && (
+                    <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-5">
+                      <div className="font-body text-[10px] tracking-[0.15em] uppercase text-amber-700 mb-3">Address These Gaps</div>
+                      <ol className="list-decimal list-inside flex flex-col gap-2">
+                        {coachingGaps.map((gap, i) => (
+                          <li key={i} className="font-body text-[14px] text-amber-800">{gap}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* Score ring + details */}
+                  <div className="flex flex-col items-center text-center bg-surface-container-lowest rounded-xl p-8 shadow-[0_2px_12px_rgba(20,66,45,0.1)]">
+                    <div className="relative w-[130px] h-[130px] mb-4">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="#e8ece9" strokeWidth="6" />
+                        <circle
+                          cx="60" cy="60" r="54" fill="none" stroke="#14422d" strokeWidth="6"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={strokeDashoffset}
+                          strokeLinecap="round"
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="font-display text-[36px] text-primary leading-none">{score}</span>
+                        <span className="font-body text-[9px] text-on-surface-variant/50 uppercase tracking-wider">/ 100</span>
+                      </div>
+                    </div>
+                    <div className="font-body text-[14px] tracking-[0.16em] uppercase text-on-surface-variant mb-4">{data.label}</div>
+                    <p className="font-body text-[16px] text-on-background leading-relaxed max-w-[680px] mb-6">{data.description}</p>
+                    {data.strengths?.length > 0 && (
+                      <div className="flex flex-col gap-2 w-full max-w-md mb-6">
+                        {data.strengths.map((s: string, j: number) => (
+                          <div key={j} className="flex items-center gap-3 font-display text-[18px] text-on-background">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                            {s}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <button
                       onClick={resetSession}
-                      className="mt-8 bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
+                      className="bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
                     >
                       New concept
                     </button>
@@ -676,7 +797,9 @@ export default function FeynmanPage() {
                   />
                   <div className="flex items-center justify-between">
                     <span className={`font-body text-[10px] tracking-[0.3em] ${charCount > 0 ? "text-primary" : "text-on-surface-variant/30"}`}>
-                      {charCount} / 4000
+                      {coachingDone && !finalSubmitted
+                        ? `${wordCount} / 30 words`
+                        : `${charCount} / 4000`}
                     </span>
                     <button
                       onClick={handleSubmit}
@@ -698,6 +821,55 @@ export default function FeynmanPage() {
           <span>System v4.1.0</span>
         </footer>
       </main>
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-6">
+          <div className="bg-surface-container-lowest rounded-2xl p-8 max-w-[420px] w-full shadow-[0_8px_32px_rgba(0,0,0,0.2)] border border-outline-variant/10 fade-in">
+            <h2 className="font-display text-[24px] italic text-primary text-center mb-2">Daily limit reached</h2>
+            <p className="font-body text-[14px] text-on-surface-variant text-center mb-8">Upgrade to Pro for unlimited sessions.</p>
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="bg-background rounded-xl p-5 border border-outline-variant/20">
+                <div className="font-body text-[10px] tracking-[0.2em] uppercase text-on-surface-variant/50 mb-2">Free</div>
+                <div className="font-display text-[20px] text-primary mb-3">3 sessions/day</div>
+                <ul className="font-body text-[12px] text-on-surface-variant/60 space-y-1.5">
+                  <li>Full coaching loop</li>
+                  <li>Score & feedback</li>
+                  <li>Session history</li>
+                </ul>
+              </div>
+              <div className="bg-primary/5 rounded-xl p-5 border border-primary/20 relative">
+                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-on-primary font-body text-[8px] tracking-[0.2em] uppercase px-3 py-0.5 rounded-full">
+                  Recommended
+                </div>
+                <div className="font-body text-[10px] tracking-[0.2em] uppercase text-primary mb-2">Pro</div>
+                <div className="font-display text-[20px] text-primary mb-3">Unlimited</div>
+                <ul className="font-body text-[12px] text-on-background space-y-1.5">
+                  <li>Unlimited sessions</li>
+                  <li>Priority AI models</li>
+                  <li>Full session history</li>
+                </ul>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  window.location.href = "/api/billing/checkout";
+                }}
+                className="w-full bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.4em] uppercase px-14 py-4 rounded-full transition-all duration-300 submit-btn-shadow"
+              >
+                Upgrade to Pro
+              </button>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-full font-body text-[11px] tracking-[0.2em] uppercase text-on-surface-variant/40 hover:text-primary transition-colors py-2"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

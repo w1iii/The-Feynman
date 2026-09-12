@@ -182,6 +182,7 @@ export async function POST(req: Request) {
           score_label: scoreLabel,
           score_description: scoreDescription.trim(),
           status: 'completed',
+          question_count: messages.length,
         })
         .eq('id', session_id);
 
