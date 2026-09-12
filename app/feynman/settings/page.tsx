@@ -37,6 +37,9 @@ export default function SettingsPage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [changePassModal, setChangePassModal] = useState(false);
   const [gcashModal, setGcashModal] = useState(false);
+  const [billingModal, setBillingModal] = useState(false);
+  const [billingData, setBillingData] = useState<{ plan: string; payments: any[]; member_since: string | null } | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'submitted' | 'pending' | 'error'>('idle');
   const [paymentError, setPaymentError] = useState("");
@@ -87,6 +90,20 @@ export default function SettingsPage() {
     setDisplayName(user?.user_metadata?.full_name || "");
     setIsEditingName(false);
     setSaveMessage(null);
+  };
+
+  const loadBilling = async () => {
+    setBillingLoading(true);
+    setBillingModal(true);
+    try {
+      const res = await authFetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      setBillingData(data);
+    } catch {
+      setBillingData(null);
+    } finally {
+      setBillingLoading(false);
+    }
   };
 
   const loadSession = (sessionId: string) => {
@@ -326,13 +343,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <button
-                      onClick={async () => {
-                        try {
-                          const res = await authFetch("/api/billing/portal", { method: "POST" });
-                          const data = await res.json();
-                          if (data.url) window.location.href = data.url;
-                        } catch { /* portal failed */ }
-                      }}
+                      onClick={loadBilling}
                       className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-surface-variant border border-outline-variant/30 hover:border-primary hover:text-primary transition-colors"
                     >
                       Manage Subscription
@@ -695,6 +706,96 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Billing Modal */}
+      {billingModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setBillingModal(false); setBillingData(null); }} />
+          <div className="relative bg-surface-container-lowest rounded-2xl p-8 w-full max-w-lg shadow-xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-[18px] text-on-background">Billing & Subscription</h3>
+              <button
+                className="text-on-surface-variant/40 hover:text-on-surface-variant transition-colors"
+                onClick={() => { setBillingModal(false); setBillingData(null); }}
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {billingLoading ? (
+              <div className="flex items-center justify-center gap-3 py-8">
+                <div className="w-5 h-5 border-2 border-outline-variant/40 border-t-primary rounded-full animate-spin" />
+                <span className="font-body text-[13px] text-on-surface-variant/60">Loading billing info...</span>
+              </div>
+            ) : billingData ? (
+              <div>
+                {/* Plan Status */}
+                <div className="mb-6">
+                  <div className="font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.08em] mb-2">Current Plan</div>
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase ${
+                      profile?.plan === "pro"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-outline-variant/20 text-on-surface-variant/60"
+                    }`}>
+                      {profile?.plan === "pro" ? "Pro" : "Free"}
+                    </span>
+                    {billingData.member_since && (
+                      <span className="font-body text-[12px] text-on-surface-variant/50">
+                        Member since {new Date(billingData.member_since).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Payment History */}
+                <div>
+                  <div className="font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.08em] mb-3">Payment History</div>
+                  {billingData.payments.length === 0 ? (
+                    <p className="font-body text-[13px] text-on-surface-variant/40 italic">No payments yet</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {billingData.payments.map((payment: any) => (
+                        <div key={payment.id} className="flex items-center justify-between p-3 bg-primary/5 rounded-lg">
+                          <div>
+                            <div className="font-body text-[13px] text-on-background">
+                              ₱{(payment.amount / 100).toFixed(0)}
+                            </div>
+                            <div className="font-body text-[11px] text-on-surface-variant/50">
+                              {new Date(payment.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              {payment.reference_number && ` • Ref: ${payment.reference_number}`}
+                            </div>
+                          </div>
+                          <span className={`font-body text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            payment.status === "approved"
+                              ? "bg-primary/10 text-primary"
+                              : payment.status === "pending"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-error/10 text-error"
+                          }`}>
+                            {payment.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="font-body text-[13px] text-on-surface-variant/40 text-center py-4">Failed to load billing info</p>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => { setBillingModal(false); setBillingData(null); }}
+                className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-surface-variant border border-outline-variant/30 hover:border-primary hover:text-primary transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
