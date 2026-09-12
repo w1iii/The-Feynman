@@ -147,24 +147,33 @@ export default function SettingsPage() {
               No sessions yet
             </div>
           ) : (
-            sessions.map((session) => (
-              <div
-                key={session.id}
-                onClick={() => loadSession(session.id)}
-                className="group flex items-center justify-between text-on-surface-variant/70 font-body text-[14px] px-8 py-3 hover:text-primary transition-colors duration-300 cursor-pointer"
-              >
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="truncate">{session.concept}</span>
-                  <span className="text-[11px] text-on-surface-variant/40">{formatDate(session.created_at)}</span>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-on-surface-variant/40 hover:text-error transition-all duration-200 flex-shrink-0 ml-2"
+            <>
+              {(profile?.plan === "pro" ? sessions : sessions.slice(0, 2)).map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => loadSession(session.id)}
+                  className="group flex items-center justify-between text-on-surface-variant/70 font-body text-[14px] px-8 py-3 hover:text-primary transition-colors duration-300 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
-                </button>
-              </div>
-            ))
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="truncate">{session.concept}</span>
+                    <span className="text-[11px] text-on-surface-variant/40">{formatDate(session.created_at)}</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-on-surface-variant/40 hover:text-error transition-all duration-200 flex-shrink-0 ml-2"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+                </div>
+              ))}
+              {profile?.plan !== "pro" && sessions.length > 2 && (
+                <div className="px-8 py-3">
+                  <p className="font-body text-[11px] text-on-surface-variant/40 italic mb-2">
+                    {sessions.length - 2} more session{sessions.length - 2 !== 1 ? "s" : ""} hidden
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </nav>
 

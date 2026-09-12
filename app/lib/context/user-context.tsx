@@ -27,6 +27,7 @@ type UserContextValue = {
   profile: Profile | null;
   sessions: Session[];
   stats: Stats | null;
+  dailyUsage: number;
   loading: boolean;
   refresh: () => Promise<void>;
 };
@@ -38,15 +39,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [dailyUsage, setDailyUsage] = useState(0);
   const [loading, setLoading] = useState(true);
   const initialized = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [profileRes, sessionsRes, statsRes] = await Promise.all([
+      const [profileRes, sessionsRes, statsRes, dailyUsageRes] = await Promise.all([
         authFetch("/api/profile"),
         authFetch("/api/getsession"),
         authFetch("/api/stats"),
+        authFetch("/api/daily-usage"),
       ]);
 
       if (profileRes.ok) {
@@ -62,6 +65,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (statsRes.ok) {
         const data = await statsRes.json();
         setStats(data);
+      }
+
+      if (dailyUsageRes.ok) {
+        const data = await dailyUsageRes.json();
+        setDailyUsage(data.sessions_used || 0);
       }
     } catch (err) {
       console.log("Error fetching user data:", err);
@@ -84,7 +92,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [fetchData]);
 
   return (
-    <UserContext.Provider value={{ user, profile, sessions, stats, loading, refresh: fetchData }}>
+    <UserContext.Provider value={{ user, profile, sessions, stats, dailyUsage, loading, refresh: fetchData }}>
       {children}
     </UserContext.Provider>
   );

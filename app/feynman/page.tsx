@@ -38,7 +38,7 @@ const CRITERIA_LABELS = [
 ];
 
 export default function FeynmanPage() {
-  const { user, profile, sessions, loading, refresh } = useUser();
+  const { user, profile, sessions, dailyUsage, loading, refresh } = useUser();
   const router = useRouter();
 
   useEffect(() => {
@@ -403,7 +403,7 @@ export default function FeynmanPage() {
   const isStep2 = conceptConfirmed && stage === 2 && !coachingDone;
 
   const dailyLimit = profile?.plan === "pro" ? null : 3;
-  const sessionsUsed = sessions.length;
+  const sessionsUsed = dailyUsage;
 
   return (
     <div className="flex h-screen w-full bg-background text-on-background overflow-hidden selection:bg-primary/10 selection:text-primary">
@@ -473,24 +473,39 @@ export default function FeynmanPage() {
               No sessions yet
             </div>
           ) : (
-            sessions.map((session) => (
-              <div
-                key={session.id}
-                onClick={() => loadSession(session.id)}
-                className="group flex items-center justify-between text-on-surface-variant/70 font-body text-[14px] px-8 py-3 hover:text-primary transition-colors duration-300 cursor-pointer"
-              >
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="truncate">{session.concept}</span>
-                  <span className="text-[11px] text-on-surface-variant/40">{formatDate(session.created_at)}</span>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-on-surface-variant/40 hover:text-error transition-all duration-200 flex-shrink-0 ml-2"
+            <>
+              {(profile?.plan === "pro" ? sessions : sessions.slice(0, 2)).map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => loadSession(session.id)}
+                  className="group flex items-center justify-between text-on-surface-variant/70 font-body text-[14px] px-8 py-3 hover:text-primary transition-colors duration-300 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
-                </button>
-              </div>
-            ))
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="truncate">{session.concept}</span>
+                    <span className="text-[11px] text-on-surface-variant/40">{formatDate(session.created_at)}</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-on-surface-variant/40 hover:text-error transition-all duration-200 flex-shrink-0 ml-2"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+                </div>
+              ))}
+              {profile?.plan !== "pro" && sessions.length > 2 && (
+                <div className="px-8 py-3">
+                  <p className="font-body text-[11px] text-on-surface-variant/40 italic mb-2">
+                    {sessions.length - 2} more session{sessions.length - 2 !== 1 ? "s" : ""} hidden
+                  </p>
+                  <button
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="font-body text-[10px] tracking-[0.15em] uppercase text-primary hover:text-[#0d3323] border-b border-primary/30 hover:border-primary transition-colors"
+                  >
+                    Upgrade to view all
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </nav>
 
@@ -531,11 +546,24 @@ export default function FeynmanPage() {
           >
             The Feynman
           </div>
-          {/* Progress */}
-          <div className="w-20 h-[1px] bg-outline-variant/30 relative">
-            <div
-              className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full transition-colors duration-500 ${stage >= 1 ? "bg-primary" : "bg-outline-variant/30"}`}
-            />
+          {/* Concept chip */}
+          {conceptConfirmed && concept && (
+            <div className="font-body text-[11px] tracking-[0.15em] uppercase text-on-surface-variant/50 mb-4 bg-primary/5 px-4 py-1.5 rounded-full border border-primary/10">
+              {concept}
+            </div>
+          )}
+          {/* 5-step progress dots */}
+          <div className="flex items-center gap-2">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <div
+                key={s}
+                className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                  s <= stage
+                    ? "bg-primary scale-110"
+                    : "bg-outline-variant/30"
+                }`}
+              />
+            ))}
           </div>
         </header>
 
@@ -744,12 +772,44 @@ export default function FeynmanPage() {
                         ))}
                       </div>
                     )}
-                    <button
-                      onClick={resetSession}
-                      className="bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
-                    >
-                      New concept
-                    </button>
+                    {/* Best moment card */}
+                    {data.bestMoment && (
+                      <div className="w-full max-w-md mb-6 bg-primary/5 border border-primary/10 rounded-xl p-5 text-left">
+                        <div className="font-body text-[10px] tracking-[0.15em] uppercase text-primary mb-2">Best Moment</div>
+                        <p className="font-display text-[16px] italic text-on-background leading-relaxed">&ldquo;{data.bestMoment}&rdquo;</p>
+                      </div>
+                    )}
+                    <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                      <button
+                        onClick={resetSession}
+                        className="bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
+                      >
+                        New concept
+                      </button>
+                      {profile?.plan === "pro" && (
+                        <button
+                          onClick={() => {
+                            resetSession();
+                            router.push("/feynman?view=history");
+                          }}
+                          className="bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant/60 hover:text-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
+                        >
+                          View history
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setFinalSubmitted(false);
+                          setCoachingDone(true);
+                          setIsReviewMode(true);
+                          setStage(3);
+                          scoreSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }}
+                        className="bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant/60 hover:text-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
+                      >
+                        Review coaching
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

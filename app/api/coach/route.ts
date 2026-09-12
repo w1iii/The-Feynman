@@ -174,13 +174,10 @@ export async function POST(req: Request) {
         console.error("Failed to save criteria results:", criteriaError);
       }
 
-      // Update session with final score
+      // Update session status (final_score is set later by /api/rate)
       const { error: updateError } = await supabase
         .from('sessions')
         .update({
-          final_score: passedCount,
-          score_label: scoreLabel,
-          score_description: scoreDescription.trim(),
           status: 'completed',
           question_count: messages.length,
         })

@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
 
   const isPro = profile?.plan === 'pro'
 
-  // Check and increment daily usage BEFORE creating session (non-pro only)
+  // Check daily usage BEFORE creating session (non-pro only)
+  let dailyUsageIncremented = false
   if (!isPro) {
     const today = new Date().toISOString().split('T')[0]
 
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
           .insert({ user_id: user.id, date: today, sessions_used: 1 })
       }
     }
+    dailyUsageIncremented = true
   }
 
   // Create session after rate limit check passes
@@ -86,6 +88,24 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (sessionError) {
+    // Rollback daily usage increment if session creation failed
+    if (dailyUsageIncremented) {
+      const today = new Date().toISOString().split('T')[0]
+      const { data: currentUsage } = await supabase
+        .from('daily_usage')
+        .select('sessions_used')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single()
+
+      if (currentUsage && currentUsage.sessions_used > 0) {
+        await supabase
+          .from('daily_usage')
+          .update({ sessions_used: currentUsage.sessions_used - 1 })
+          .eq('user_id', user.id)
+          .eq('date', today)
+      }
+    }
     return NextResponse.json(
       { error: sessionError.message },
       { status: 500 }

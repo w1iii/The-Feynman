@@ -49,7 +49,8 @@ export async function POST(req: Request) {
         "score": 85,
         "label": "Strong understanding",
         "description": "2–3 sentence summary of strengths and minor gaps.",
-        "strengths": ["strength 1", "strength 2", "strength 3"]
+        "strengths": ["strength 1", "strength 2", "strength 3"],
+        "bestMoment": "The user's strongest sentence or analogy from their explanation."
       }
     `;
 
@@ -58,6 +59,7 @@ export async function POST(req: Request) {
       label: string;
       description: string;
       strengths?: string[];
+      bestMoment?: string;
     };
 
     let parsed: RateResponse;
@@ -109,6 +111,7 @@ export async function POST(req: Request) {
       label: parsed.label,
       description: parsed.description,
       strengths: parsed.strengths ?? [],
+      bestMoment: parsed.bestMoment ?? null,
     });
 
   } catch (error) {
