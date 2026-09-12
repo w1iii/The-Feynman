@@ -70,13 +70,13 @@ export default function LandingPage() {
         {/* Hero */}
         <section className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center text-center px-gutter py-16">
           <span className="font-body text-[11px] tracking-[0.4em] uppercase text-primary mb-6 opacity-80">
-            The Master&apos;s Method
+            For Filipino students and lifelong learners
           </span>
-          <h1 className="font-display text-[clamp(56px,10vw,120px)] text-primary leading-[1.1] mb-6">
-            Feynman
+          <h1 className="font-display text-[clamp(44px,7vw,84px)] text-primary leading-[1.05] mb-6 max-w-[850px]">
+            Master difficult lessons by explaining them.
           </h1>
           <p className="font-display text-[clamp(20px,3vw,32px)] text-on-surface-variant italic max-w-[500px] mb-12">
-            Learn anything deeply
+            Learn with an AI coach that helps you find the gaps.
           </p>
 
           <div className="flex gap-4 mb-12 flex-col sm:flex-row">
@@ -84,7 +84,7 @@ export default function LandingPage() {
               href="/signup"
               className="font-body text-[11px] tracking-[0.4em] uppercase bg-primary text-on-primary px-14 py-4 rounded-full no-underline hover:bg-[#0d3323] transition-all duration-300 submit-btn-shadow"
             >
-              Get Started
+              Start for free
             </Link>
             <Link
               href="/login"
@@ -93,9 +93,50 @@ export default function LandingPage() {
               Sign In
             </Link>
           </div>
+          <p className="font-body text-[12px] text-on-surface-variant/70 -mt-6 mb-10">
+            No credit card required
+          </p>
 
-          <div className="relative w-full max-w-[900px] h-[300px] sm:h-[400px] rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.1)] border border-outline-variant/20">
-            <Image src="/image.jpg" alt="Feynman learning" fill className="object-cover" sizes="(max-width: 640px) 100vw, 900px" />
+          <div aria-label="24-second product demo" className="relative w-full max-w-[900px] rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.1)] border border-outline-variant/20 bg-surface-container-lowest text-left">
+            <div className="flex items-center justify-between border-b border-outline-variant/20 px-5 py-3">
+              <span className="font-body text-[11px] tracking-[0.25em] uppercase text-primary">24-second demo</span>
+              <span className="font-body text-[12px] text-on-surface-variant/60">Watch how it works</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-6 p-6 sm:p-10">
+              <div className="rounded-lg bg-background p-5 border border-outline-variant/20">
+                <span className="font-body text-[10px] tracking-[0.2em] uppercase text-on-surface-variant/60">You explain</span>
+                <p className="font-display text-[22px] text-primary mt-3">Glycolysis turns glucose into energy...</p>
+              </div>
+              <span className="material-symbols-outlined text-primary text-3xl rotate-90 md:rotate-0" aria-hidden="true">arrow_forward</span>
+              <div className="rounded-lg bg-primary p-5 text-on-primary">
+                <span className="font-body text-[10px] tracking-[0.2em] uppercase text-on-primary/70">Your AI coach asks</span>
+                <p className="font-display text-[22px] mt-3">What happens to the glucose molecule first?</p>
+              </div>
+            </div>
+            <div className="h-1 bg-primary/10">
+              <div className="h-full w-2/3 bg-primary animate-demo-progress" />
+            </div>
+          </div>
+          <p className="font-body text-[12px] text-on-surface-variant/70 mt-5">
+            Try it with glycolysis, derivatives, or Rizal.
+          </p>
+        </section>
+
+        {/* Real examples */}
+        <section className="py-16 px-gutter max-w-[1200px] mx-auto border-t border-outline-variant/20">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-10 items-start">
+            <div>
+              <span className="font-body text-[11px] tracking-[0.3em] uppercase text-primary">Start with any lesson</span>
+              <h2 className="font-display text-[clamp(30px,4vw,48px)] text-primary leading-tight mt-3">Turn “I don&apos;t get it” into “I can explain it.”</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {["Explain glycolysis", "Explain derivatives", "Explain Rizal"].map((example) => (
+                <div key={example} className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/20 shadow-[0_2px_12px_rgba(20,66,45,0.08)]">
+                  <span className="material-symbols-outlined text-primary mb-8" aria-hidden="true">edit_note</span>
+                  <p className="font-display text-[21px] text-primary">{example}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -157,15 +198,31 @@ export default function LandingPage() {
                 Ready to master your curiosity?
               </h2>
               <p className="font-body text-[16px] text-on-surface-variant max-w-[500px] mx-auto mb-8">
-                Join thousands of researchers, students, and lifelong learners who use the Feynman technique to build lasting knowledge.
+                Start with 3 free coaching sessions every day. Upgrade to Pro when you need unlimited practice.
               </p>
               <Link
                 href="/signup"
                 className="inline-block font-body text-[11px] tracking-[0.4em] uppercase bg-primary text-on-primary px-14 py-4 rounded-full no-underline hover:bg-[#0d3323] transition-all duration-300 submit-btn-shadow"
               >
-                Get Started Now
+                Start for free
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* Philippine pricing */}
+        <section className="py-16 px-gutter max-w-[1200px] mx-auto">
+          <div className="rounded-2xl bg-primary text-on-primary p-8 sm:p-12 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 items-center">
+            <div>
+              <span className="font-body text-[11px] tracking-[0.3em] uppercase text-on-primary/70">Simple Philippine pricing</span>
+              <h2 className="font-display text-[clamp(30px,4vw,44px)] mt-3">Keep learning at your pace.</h2>
+              <p className="font-body text-[15px] text-on-primary/75 mt-4 max-w-[560px]">
+                Free gives you 3 sessions per day. Pro is ₱499/month for unlimited sessions, payable with GCash, Maya, or card.
+              </p>
+            </div>
+            <Link href="/signup" className="inline-block text-center font-body text-[11px] tracking-[0.3em] uppercase bg-on-primary text-primary px-8 py-4 rounded-full no-underline hover:bg-white/90 transition-all">
+              Try it free
+            </Link>
           </div>
         </section>
       </main>

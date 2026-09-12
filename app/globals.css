@@ -146,6 +146,19 @@ body::before {
   }
 }
 
+@keyframes demoProgress {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.animate-demo-progress {
+  animation: demoProgress 24s linear infinite;
+}
+
 .font-serif {
   font-family: Georgia, serif;
 }
