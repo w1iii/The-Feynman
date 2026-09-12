@@ -66,6 +66,11 @@ export default function FeynmanPage() {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [coachingGaps, setCoachingGaps] = useState<string[]>([]);
+  const [lastCoachError, setLastCoachError] = useState<{
+    conceptStr: string;
+    history: { role: "user" | "assistant"; content: string }[];
+    currentSessionId: string;
+  } | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -329,11 +334,25 @@ export default function FeynmanPage() {
         setMessages((prev) => [...prev, { role: "ai", content: data.question }]);
         setApiMessages((prev) => [...prev, { role: "assistant", content: data.question }]);
       }
-    } catch {
-      setMessages((prev) => [...prev, { role: "ai", content: "Something went wrong. Please try again." }]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      const isRetryable = msg.includes("unavailable") || msg.includes("timed out");
+      setMessages((prev) => [...prev, {
+        role: "ai",
+        content: isRetryable
+          ? "The AI service hit a snag. You can try again — your conversation is saved."
+          : "Something went wrong. Please try again.",
+      }]);
+      setLastCoachError(isRetryable ? { conceptStr, history, currentSessionId } : null);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const retryLastCoach = async () => {
+    if (!lastCoachError) return;
+    setMessages((prev) => prev.slice(0, -1)); // remove error message
+    await callCoach(lastCoachError.conceptStr, lastCoachError.history, lastCoachError.currentSessionId);
   };
 
   const resetSession = () => {
@@ -353,6 +372,7 @@ export default function FeynmanPage() {
     setError(null);
     setShowUpgradeModal(false);
     setCoachingGaps([]);
+    setLastCoachError(null);
   };
 
   const handleInputChange = (val: string) => {
@@ -820,9 +840,22 @@ export default function FeynmanPage() {
               {messages.map((msg, i) => {
                 if (!msg?.content) return null;
                 if (msg.role === "ai" && msg.content.startsWith("__SCORE__")) return null;
+                const isError = msg.role === "ai" && (
+                  msg.content.includes("Something went wrong") ||
+                  msg.content.includes("hit a snag")
+                );
+                const isLast = i === messages.length - 1;
                 return msg.role === "ai" ? (
-                  <div key={i} className="flex justify-start max-w-[80%]">
+                  <div key={i} className="flex flex-col gap-2 max-w-[80%]">
                     <p className="msg-ai-text font-display italic text-on-surface-variant/90 leading-[1.7] bg-surface-container-low rounded-2xl rounded-bl-sm px-5 py-3 border-l-[3px] border-primary">{msg.content}</p>
+                    {isError && isLast && lastCoachError && !isLoading && (
+                      <button
+                        onClick={retryLastCoach}
+                        className="self-start font-body text-[10px] tracking-[0.15em] uppercase text-primary hover:text-[#0d3323] border border-primary/30 hover:border-primary px-4 py-1.5 rounded-full transition-all duration-200"
+                      >
+                        Try again
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div key={i} className="flex justify-end">
