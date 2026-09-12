@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '../../../lib/supabase/server'
+import { rateLimit, getClientIp } from '../../../lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const { allowed, remaining } = await rateLimit(`login:${ip}`, 10, 60)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many login attempts. Please try again later.' },
+      { status: 429 }
+    )
+  }
+
   const { email, password } = await request.json()
 
   if (!email || !password) {

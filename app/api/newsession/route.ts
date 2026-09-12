@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUser } from '../../lib/supabase/auth-helper'
 import { invalidateUserSessionsAndStats } from '../../lib/redis/cache'
+import { rateLimit } from '../../lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   const { concept } = await request.json()
@@ -14,6 +15,14 @@ export async function POST(request: NextRequest) {
 
   const { user, supabase, error } = await requireUser()
   if (error) return error
+
+  const { allowed } = await rateLimit(`newsession:${user.id}`, 10, 60)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait.' },
+      { status: 429 }
+    )
+  }
 
   // Check user's profile plan
   const { data: profile } = await supabase

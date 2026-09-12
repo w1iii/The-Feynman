@@ -2,11 +2,17 @@ import { NextResponse } from "next/server";
 import { requireUser } from "../../lib/supabase/auth-helper";
 import { invalidateUserSessionsAndStats, invalidateSessionCache } from "../../lib/redis/cache";
 import { groqChat, parseJsonResponse } from "../../lib/ai/ai";
+import { rateLimit } from "../../lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
     const { user, supabase, error } = await requireUser();
     if (error) return error;
+
+    const { allowed } = await rateLimit(`rate:${user.id}`, 5, 60);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests. Please wait." }, { status: 429 });
+    }
 
     const { concept, finalExplanation, session_id }: { 
       concept: string; 

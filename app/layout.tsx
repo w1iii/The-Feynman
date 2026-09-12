@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Great_Vibes, Cormorant_Garamond, Josefin_Sans, EB_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
+import { ErrorBoundary } from "./error-boundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,7 +70,7 @@ export default function RootLayout({
       `}
     >
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" precedence="default" />
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col"><ErrorBoundary>{children}</ErrorBoundary></body>
     </html>
   );
 }

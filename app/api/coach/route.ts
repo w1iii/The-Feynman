@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "../../lib/supabase/auth-helper";
 import { invalidateUserSessionsAndStats, invalidateSessionCache } from "../../lib/redis/cache";
 import { groqChat, parseJsonResponse } from "../../lib/ai/ai";
+import { rateLimit } from "../../lib/rate-limit";
 
 type Message = {
   role: "user" | "assistant";
@@ -12,17 +13,14 @@ export async function POST(req: Request) {
   try {
     const { messages, concept, session_id }: { messages: Message[]; concept: string; session_id: string } = await req.json();
 
-    if (!messages || messages.length === 0) {
-      return NextResponse.json({ error: "Messages are required" }, { status: 400 });
-    }
-
-    if (!session_id) {
-      return NextResponse.json({ error: "Session ID is required" }, { status: 400 });
-    }
-
     // Get authenticated user and verify session ownership
     const { user, supabase, error } = await requireUser();
     if (error) return error
+
+    const { allowed } = await rateLimit(`coach:${user.id}`, 20, 60);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests. Please wait." }, { status: 429 });
+    }
 
     // Verify session belongs to user
     const { data: session, error: sessionError } = await supabase

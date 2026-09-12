@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '../../../lib/supabase/server'
+import { rateLimit, getClientIp } from '../../../lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request)
+  const { allowed } = await rateLimit(`signup:${ip}`, 5, 300)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Too many signup attempts. Please try again later.' },
+      { status: 429 }
+    )
+  }
+
   const { email, password, redirectTo } = await request.json()
 
   if (!email || !password) {
