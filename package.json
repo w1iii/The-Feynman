@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui --ui-host=127.0.0.1 --ui-port=0"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
@@ -16,11 +18,12 @@
     "@upstash/redis": "^1.37.0",
     "groq-sdk": "^1.1.2",
     "next": "16.2.4",
+    "paymongo-node": "^10.17.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "paymongo-node": "^10.17.0"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

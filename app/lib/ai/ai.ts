@@ -21,7 +21,7 @@ function getClient() {
   return new Groq({ apiKey: process.env.GROQ_API_KEY });
 }
 
-function isRetryableError(err: unknown): boolean {
+export function isRetryableError(err: unknown): boolean {
   const e = err as { status?: number; message?: string };
   return !!(
     e?.status === 429 ||
@@ -37,7 +37,7 @@ function isRetryableError(err: unknown): boolean {
   );
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
