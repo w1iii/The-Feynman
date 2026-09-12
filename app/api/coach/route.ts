@@ -13,6 +13,20 @@ export async function POST(req: Request) {
   try {
     const { messages, concept, session_id }: { messages: Message[]; concept: string; session_id: string } = await req.json();
 
+    // Validate input
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+    if (!concept || !session_id) {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+
+    // Cap total message content to prevent AI cost explosion
+    const totalChars = messages.reduce((sum, m) => sum + (m.content?.length || 0), 0);
+    if (totalChars > 100_000) {
+      return NextResponse.json({ error: "Conversation too long" }, { status: 400 });
+    }
+
     // Get authenticated user and verify session ownership
     const { user, supabase, error } = await requireUser();
     if (error) return error
@@ -202,7 +216,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("FULL ERROR:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal error" },
+      { error: "An unexpected error occurred. Please try again." },
       { status: 500 }
     );
   }

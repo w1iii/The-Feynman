@@ -15,6 +15,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'priceId is required' }, { status: 400 })
     }
 
+    // Validate price ID against allowed list
+    const validPriceIds = new Set<string>();
+    if (process.env.STRIPE_PRICE_PRO) validPriceIds.add(process.env.STRIPE_PRICE_PRO);
+    if (!validPriceIds.has(priceId)) {
+      return NextResponse.json({ error: 'Invalid price' }, { status: 400 })
+    }
+
     // Ensure we have a stripe customer for this user
     const { data: profile, error: profileError } = await supabase
       .from('profiles')

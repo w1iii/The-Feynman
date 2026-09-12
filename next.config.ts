@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ['groq-sdk'],
+  experimental: {
+    serverActions: { bodySizeLimit: '2mb' },
+  },
 };
 
 export default nextConfig;

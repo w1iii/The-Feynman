@@ -7,7 +7,10 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
 
-  const supabaseResponse = NextResponse.redirect(`${origin}${next}`)
+  // Prevent open redirect — only allow relative paths
+  const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/'
+
+  const supabaseResponse = NextResponse.redirect(`${origin}${safeNext}`)
 
   if (code) {
     const supabase = createServerClient(

@@ -27,6 +27,15 @@ export async function POST(req: Request) {
       );
     }
 
+    // Cap input size — prevent AI API cost explosion
+    const maxExplanationLength = 50_000;
+    if (finalExplanation.length > maxExplanationLength) {
+      return NextResponse.json(
+        { error: "Explanation too long" },
+        { status: 400 }
+      );
+    }
+
     const systemInstruction = `
       You are evaluating a final Feynman explanation for depth of understanding.
 
@@ -80,6 +89,23 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate and sanitize AI response before DB write
+    const VALID_LABELS = [
+      "Expert-level clarity",
+      "Strong understanding", 
+      "Good grasp",
+      "Developing understanding",
+      "Keep exploring",
+    ];
+
+    const score = Math.min(100, Math.max(1, Math.round(Number(parsed.score) || 0)));
+    const label = VALID_LABELS.includes(parsed.label) ? parsed.label : "Developing understanding";
+    const description = typeof parsed.description === "string" ? parsed.description.slice(0, 1000) : "";
+    const strengths = Array.isArray(parsed.strengths)
+      ? parsed.strengths.filter((s): s is string => typeof s === "string").slice(0, 5)
+      : [];
+    const bestMoment = typeof parsed.bestMoment === "string" ? parsed.bestMoment.slice(0, 500) : null;
+
     // Persist score to sessions table
     if (session_id) {
       // Verify session belongs to user before updating
@@ -94,9 +120,9 @@ export async function POST(req: Request) {
         await supabase
           .from('sessions')
           .update({
-            final_score: parsed.score,
-            score_label: parsed.label,
-            score_description: parsed.description,
+            final_score: score,
+            score_label: label,
+            score_description: description,
           })
           .eq('id', session_id)
           .eq('user_id', user.id);
@@ -107,17 +133,17 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      score: parsed.score,
-      label: parsed.label,
-      description: parsed.description,
-      strengths: parsed.strengths ?? [],
-      bestMoment: parsed.bestMoment ?? null,
+      score,
+      label,
+      description,
+      strengths,
+      bestMoment,
     });
 
   } catch (error) {
     console.error("FULL ERROR:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal error" },
+      { error: "An unexpected error occurred. Please try again." },
       { status: 500 }
     );
   }

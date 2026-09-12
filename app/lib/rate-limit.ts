@@ -8,6 +8,16 @@ type RateLimitResult = {
 
 const memStore = new Map<string, { count: number; windowStart: number }>()
 
+// Evict stale entries when store gets too large
+function evictStale(maxWindowMs: number) {
+  if (memStore.size > 10_000) {
+    const now = Date.now();
+    for (const [k, v] of memStore) {
+      if (now - v.windowStart > maxWindowMs * 2) memStore.delete(k);
+    }
+  }
+}
+
 export async function rateLimit(
   key: string,
   maxRequests: number,
@@ -20,6 +30,7 @@ export async function rateLimit(
   const redis = getRedisClient()
 
   if (!redis) {
+    evictStale(windowMs);
     const entry = memStore.get(fullKey)
     if (!entry || now - entry.windowStart >= windowMs) {
       memStore.set(fullKey, { count: 1, windowStart })

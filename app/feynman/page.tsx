@@ -946,8 +946,20 @@ export default function FeynmanPage() {
             </div>
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => {
-                  window.location.href = "/api/billing/checkout";
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/billing/checkout", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO }),
+                    });
+                    const data = await res.json();
+                    if (data.url) {
+                      window.location.href = data.url;
+                    }
+                  } catch {
+                    // Checkout failed — silently handle
+                  }
                 }}
                 className="w-full bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.4em] uppercase px-14 py-4 rounded-full transition-all duration-300 submit-btn-shadow"
               >
