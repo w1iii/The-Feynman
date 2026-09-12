@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "../lib/supabase/client";
 import { authFetch, clearTokenCache } from "../lib/api/client";
 import { useUser } from "../lib/context/user-context";
@@ -560,7 +561,7 @@ export default function FeynmanPage() {
             className="text-display-lg font-display italic text-primary dark:text-primary select-none text-center leading-none mb-4"
             style={{ fontSize: "clamp(36px, 6vw, 56px)" }}
           >
-            The Feynman
+            <Image src="/f-logo.png" alt="The Feynman" width={56} height={56} className="object-contain mx-auto" priority />
           </div>
           {/* Concept chip */}
           {conceptConfirmed && concept && (

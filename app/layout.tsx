@@ -48,6 +48,9 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "The Feynman",
   description: "Master difficult lessons by explaining them. For Filipino students and lifelong learners.",
+  icons: {
+    icon: "/f-logo.png",
+  },
 };
 
 export default function RootLayout({

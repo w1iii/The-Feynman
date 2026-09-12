@@ -24,7 +24,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-20 px-gutter max-w-[1200px] mx-auto bg-background/95 backdrop-blur-md border-b border-outline-variant/20">
         <Link href="/" className="font-display text-[28px] text-primary no-underline">
-          Feynman
+          <Image src="/f-logo.png" alt="The Feynman" width={38} height={38} className="object-contain" priority />
         </Link>
 
         <button
