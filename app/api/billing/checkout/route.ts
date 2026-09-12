@@ -1,61 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStripeClient } from '../../../lib/stripe/client'
 import { requireUser } from '../../../lib/supabase/auth-helper'
 
 export async function POST(request: NextRequest) {
   try {
-    const stripe = getStripeClient()
     const { user, supabase, error } = await requireUser()
     if (error) return error
 
     const body = await request.json()
-    const priceId = body.priceId
+    const amount = body.amount || parseInt(process.env.PAYMONGO_AMOUNT_PRO || '49900', 10)
 
-    if (!priceId) {
-      return NextResponse.json({ error: 'priceId is required' }, { status: 400 })
+    if (!amount || amount < 100) {
+      return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
     }
 
-    // Validate price ID against allowed list
-    const validPriceIds = new Set<string>();
-    if (process.env.STRIPE_PRICE_PRO) validPriceIds.add(process.env.STRIPE_PRICE_PRO);
-    if (!validPriceIds.has(priceId)) {
-      return NextResponse.json({ error: 'Invalid price' }, { status: 400 })
+    const secretKey = process.env.PAYMONGO_SECRET_KEY
+    if (!secretKey) {
+      return NextResponse.json({ error: 'PayMongo not configured' }, { status: 500 })
     }
 
-    // Ensure we have a stripe customer for this user
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('user_id', user.id)
-      .single()
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 
-    if (profileError) {
-      console.error('Profile fetch error', profileError)
-    }
-
-    let customerId = profile?.stripe_customer_id || null
-    if (!customerId) {
-      const customer = await stripe.customers.create({ email: user.email, metadata: { user_id: user.id } })
-      customerId = customer.id
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ stripe_customer_id: customerId })
-        .eq('user_id', user.id)
-
-      if (updateError) console.error('Failed to persist stripe_customer_id', updateError)
-    }
-
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/feynman/settings?session=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/feynman/settings?session=cancel`,
+    // Create PayMongo checkout session
+    const res = await fetch('https://api.paymongo.com/v1/checkout_sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(secretKey + ':').toString('base64')}`,
+      },
+      body: JSON.stringify({
+        data: {
+          attributes: {
+            send_email_receipt: true,
+            show_line_items: true,
+            line_items: [
+              {
+                name: 'Feynman Pro',
+                amount: amount,
+                currency: 'PHP',
+                quantity: 1,
+              },
+            ],
+            payment_method_types: ['card', 'gcash', 'paymaya'],
+            success_url: `${baseUrl}/feynman/settings?session=success`,
+            cancel_url: `${baseUrl}/feynman/settings?session=cancel`,
+            description: 'Feynman Pro Subscription',
+            metadata: {
+              user_id: user.id,
+            },
+          },
+        },
+      }),
     })
 
-    return NextResponse.json({ url: session.url })
+    const data = await res.json()
+
+    if (!res.ok || !data.data?.attributes?.checkout_url) {
+      console.error('PayMongo checkout error', data)
+      return NextResponse.json({ error: 'Checkout creation failed' }, { status: 500 })
+    }
+
+    // Store paymongo customer reference if needed
+    const checkoutSessionId = data.data.id
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ paymongo_customer_id: checkoutSessionId })
+      .eq('user_id', user.id)
+
+    if (updateError) console.error('Failed to persist paymongo_customer_id', updateError)
+
+    return NextResponse.json({ url: data.data.attributes.checkout_url })
   } catch (err) {
     console.error('Checkout error', err)
     return NextResponse.json({ error: 'Checkout creation failed' }, { status: 500 })

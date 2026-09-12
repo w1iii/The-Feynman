@@ -36,6 +36,12 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [changePassModal, setChangePassModal] = useState(false);
+  const [gcashModal, setGcashModal] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'submitted' | 'pending' | 'error'>('idle');
+  const [paymentError, setPaymentError] = useState("");
+  const [pendingPayment, setPendingPayment] = useState<any>(null);
+  const [referenceNumber, setReferenceNumber] = useState("");
 
   const startEditing = () => {
     setDisplayName(user?.user_metadata?.full_name || "");
@@ -307,21 +313,96 @@ export default function SettingsPage() {
           <section className="mb-8">
             <h2 className="font-body text-[10px] text-on-surface-variant/50 uppercase tracking-[0.15em] mb-3 pb-2 border-b border-outline-variant/20">Billing</h2>
             <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_2px_8px_rgba(20,66,45,0.06)]">
-              <div className="flex items-center justify-between gap-4 flex-wrap">
+              {profile?.plan === "pro" ? (
+                /* Pro plan */
                 <div>
-                  <div className="font-body text-[11px] text-on-surface-variant/50 mb-1 uppercase tracking-[0.08em]">Plan</div>
-                  <span className={`inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase ${
-                    profile?.plan === "free"
-                      ? "bg-outline-variant/20 text-on-surface-variant/60"
-                      : "bg-primary/10 text-primary"
-                  }`}>
-                    {profile?.plan || "Free"}
-                  </span>
+                  <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
+                    <div>
+                      <div className="font-body text-[11px] text-on-surface-variant/50 mb-1 uppercase tracking-[0.08em]">Current Plan</div>
+                      <span className="inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase bg-primary/10 text-primary">
+                        Pro
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await authFetch("/api/billing/portal", { method: "POST" });
+                          const data = await res.json();
+                          if (data.url) window.location.href = data.url;
+                        } catch { /* portal failed */ }
+                      }}
+                      className="px-5 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-surface-variant border border-outline-variant/30 hover:border-primary hover:text-primary transition-colors"
+                    >
+                      Manage Subscription
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 font-body text-[13px] text-on-surface-variant/50 italic">
-                Billing coming soon
-              </div>
+              ) : (
+                /* Free plan */
+                <div>
+                  <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+                    <div>
+                      <div className="font-body text-[11px] text-on-surface-variant/50 mb-1 uppercase tracking-[0.08em]">Current Plan</div>
+                      <span className="inline-block px-3 py-1 rounded-full font-body text-[11px] tracking-[0.08em] uppercase bg-outline-variant/20 text-on-surface-variant/60">
+                        Free
+                      </span>
+                    </div>
+                    <div className="font-body text-[12px] text-on-surface-variant/40">
+                      {Math.min(sessions?.length || 0, 3)} of 3 sessions used today
+                    </div>
+                  </div>
+
+                  {/* Plan comparison */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                    <div className="border border-outline-variant/20 rounded-lg p-4">
+                      <div className="font-body text-[10px] tracking-[0.15em] uppercase text-on-surface-variant/50 mb-2">Free</div>
+                      <ul className="font-body text-[12px] text-on-surface-variant/60 space-y-1.5">
+                        <li>3 sessions per day</li>
+                        <li>Full coaching loop</li>
+                        <li>Score & feedback</li>
+                      </ul>
+                    </div>
+                    <div className="border border-primary/20 bg-primary/5 rounded-lg p-4 relative">
+                      <div className="absolute -top-2.5 left-3 bg-primary text-on-primary font-body text-[8px] tracking-[0.15em] uppercase px-2 py-0.5 rounded-full">
+                        Upgrade
+                      </div>
+                      <div className="font-body text-[10px] tracking-[0.15em] uppercase text-primary mb-2">Pro</div>
+                      <ul className="font-body text-[12px] text-on-background space-y-1.5">
+                        <li>Unlimited sessions</li>
+                        <li>Priority AI models</li>
+                        <li>Full session history</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => setGcashModal(true)}
+                      className="flex-1 bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.3em] uppercase px-10 py-3 rounded-full transition-all duration-300"
+                    >
+                      Pay via GCash
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await authFetch("/api/billing/checkout", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO }),
+                          });
+                          const data = await res.json();
+                          if (data.url) window.location.href = data.url;
+                        } catch { /* checkout failed */ }
+                      }}
+                      className="flex-1 px-5 py-3 rounded-full font-body text-[11px] tracking-[0.12em] text-on-surface-variant border border-outline-variant/30 hover:border-primary hover:text-primary transition-colors"
+                    >
+                      Pay via Card
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -402,7 +483,7 @@ export default function SettingsPage() {
           {changePassModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-black/40" onClick={() => { setChangePassModal(false); setPasswordError(""); }} />
-              <div className="relative bg-surface-container-lowest rounded-2xl p-8 w-full max-w-sm shadow-xl">
+          <div className="relative bg-surface-container-lowest rounded-2xl p-8 w-full max-w-2xl shadow-xl">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-display text-[18px] text-on-background">Change Password</h3>
                   <button
@@ -493,6 +574,130 @@ export default function SettingsPage() {
           <span>System v4.1.0</span>
         </footer>
       </main>
+
+      {/* GCash Payment Modal */}
+      {gcashModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setGcashModal(false); setPaymentStatus('idle'); setPaymentError(""); }} />
+          <div className="relative bg-surface-container-lowest rounded-2xl p-8 w-full max-w-sm shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-[18px] text-on-background">Pay via GCash</h3>
+              <button
+                className="text-on-surface-variant/40 hover:text-on-surface-variant transition-colors"
+                onClick={() => { setGcashModal(false); setPaymentStatus('idle'); setPaymentError(""); }}
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {paymentStatus === 'submitted' ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="material-symbols-outlined text-primary text-[24px]">check_circle</span>
+                </div>
+                <p className="font-body text-[14px] text-on-background mb-2">Payment submitted!</p>
+                <p className="font-body text-[12px] text-on-surface-variant/60">
+                  Payment processed. You&apos;ll be upgraded to Pro once confirmed.
+                </p>
+                <button
+                  onClick={() => { setGcashModal(false); setPaymentStatus('idle'); setPaymentError(""); }}
+                  className="mt-6 px-6 py-2.5 rounded-lg font-body text-[11px] uppercase tracking-[0.12em] text-on-primary bg-primary hover:bg-[#0d3323] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-8">
+                {/* Left: QR + Amount */}
+                <div className="flex flex-col items-center sm:w-1/2">
+                  <div className="bg-white rounded-xl p-4 mb-4 flex items-center justify-center">
+                    <img
+                      src="/gcash-qr.png"
+                      alt="GCash QR Code"
+                      className="w-64 h-64 object-contain"
+                    />
+                  </div>
+                  <div className="text-center">
+                    <div className="font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-1">Amount</div>
+                    <div className="font-display text-[24px] text-on-background">₱499</div>
+                  </div>
+                </div>
+
+                {/* Right: Steps + Input */}
+                <div className="sm:w-1/2">
+                  {/* Instructions */}
+                  <div className="bg-primary/5 rounded-lg p-4 mb-4">
+                    <ol className="font-body text-[12px] text-on-surface-variant/70 space-y-2">
+                      <li>1. Open your GCash app</li>
+                      <li>2. Scan the QR code</li>
+                      <li>3. Enter ₱499 as the amount</li>
+                      <li>4. Complete the payment</li>
+                      <li>5. Copy the reference number</li>
+                      <li>6. Paste it below and submit</li>
+                    </ol>
+                  </div>
+
+                  {/* Error message */}
+                  {paymentStatus === 'error' && (
+                    <p className="font-body text-[12px] text-error mb-4">{paymentError || "Failed to submit payment. Please try again."}</p>
+                  )}
+
+                  {/* Reference number input */}
+                  <div className="mb-4">
+                    <label className="block font-body text-[11px] text-on-surface-variant/50 uppercase tracking-[0.1em] mb-2">GCash Reference Number</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 1234567890123"
+                      className="w-full px-3.5 py-2.5 border border-outline-variant/50 rounded-lg font-body text-[14px] text-on-background bg-transparent focus:outline-none focus:border-primary transition-colors"
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Submit button */}
+                  <button
+                    onClick={async () => {
+                      setPaymentLoading(true);
+                      setPaymentError("");
+                      try {
+                        const res = await authFetch("/api/payments", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ amount: 49900, reference_number: referenceNumber }),
+                        });
+                        if (res.ok) {
+                          setPaymentStatus('submitted');
+                          setReferenceNumber("");
+                        } else {
+                          const data = await res.json().catch(() => null);
+                          const msg = data?.error || `Payment failed (${res.status})`;
+                          console.error("[payment] API error:", res.status, msg);
+                          setPaymentError(msg);
+                          setPaymentStatus('error');
+                        }
+                      } catch (err) {
+                        console.error("[payment] Network error:", err);
+                        setPaymentError("Network error — check connection");
+                        setPaymentStatus('error');
+                      } finally {
+                        setPaymentLoading(false);
+                      }
+                    }}
+                    disabled={paymentLoading || !referenceNumber.trim()}
+                    className="w-full bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.3em] uppercase px-10 py-3 rounded-full transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {paymentLoading ? "Submitting..." : "Submit Payment"}
+                  </button>
+
+                  <p className="font-body text-[10px] text-on-surface-variant/40 text-center mt-3">
+                    Payment verification takes up to 24 hours
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
