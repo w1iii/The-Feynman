@@ -63,7 +63,7 @@ export default function FeynmanPage() {
   const [, startTransition] = useTransition();
   const [charCount, setCharCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [isReviewMode, setIsReviewMode] = useState(false);
+
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [coachingGaps, setCoachingGaps] = useState<string[]>([]);
   const [lastCoachError, setLastCoachError] = useState<{
@@ -123,7 +123,6 @@ export default function FeynmanPage() {
       setConceptConfirmed(true);
       if (session.status === 'completed' && session.final_score !== null) {
         setCoachingDone(true);
-        setIsReviewMode(true);
         setStage(5);
         setMessages(prev => [...prev, {
           role: 'ai' as const,
@@ -136,7 +135,6 @@ export default function FeynmanPage() {
         }]);
       } else {
         setStage(2);
-        setIsReviewMode(false);
         const allCriteriaMet = passedIndices.length === 5;
         if (allCriteriaMet) {
           setCoachingDone(true);
@@ -188,7 +186,6 @@ export default function FeynmanPage() {
         setCoachingDone(false);
         setFinalSubmitted(false);
         setPassed([]);
-        setIsReviewMode(false);
       }
     } catch {
       setError("Failed to delete session");
@@ -368,7 +365,6 @@ export default function FeynmanPage() {
     setIsLoading(false);
     setCoachingDone(false);
     setFinalSubmitted(false);
-    setIsReviewMode(false);
     setError(null);
     setShowUpgradeModal(false);
     setCoachingGaps([]);
@@ -667,13 +663,7 @@ export default function FeynmanPage() {
               </div>
             )}
 
-            {/* Review mode header */}
-            {isReviewMode && (
-              <div className="flex items-center gap-3 p-4 bg-surface-container-lowest rounded-lg mb-8 border border-outline-variant/20">
-                <span className="font-body text-[10px] tracking-[0.14em] uppercase text-on-surface-variant/60 bg-primary/10 px-2.5 py-1 rounded">Review</span>
-                <span className="font-display text-[20px] text-on-background">{concept}</span>
-              </div>
-            )}
+
 
             {/* Criteria pills */}
             {conceptConfirmed && !coachingDone && passed.length > 0 && (
@@ -806,29 +796,6 @@ export default function FeynmanPage() {
                       >
                         New concept
                       </button>
-                      {profile?.plan === "pro" && (
-                        <button
-                          onClick={() => {
-                            resetSession();
-                            router.push("/feynman?view=history");
-                          }}
-                          className="bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant/60 hover:text-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
-                        >
-                          View history
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          setFinalSubmitted(false);
-                          setCoachingDone(true);
-                          setIsReviewMode(true);
-                          setStage(3);
-                          scoreSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }}
-                        className="bg-transparent border border-outline-variant/30 hover:border-primary text-on-surface-variant/60 hover:text-primary font-body text-[11px] tracking-[0.22em] uppercase px-10 py-4 rounded-full transition-all duration-300"
-                      >
-                        Review coaching
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -874,7 +841,7 @@ export default function FeynmanPage() {
             </div>
 
             {/* Input area */}
-            {!finalSubmitted && !isReviewMode && (
+            {!finalSubmitted && (
               <div className="mt-auto pt-6 border-t border-outline-variant/10">
                 <div className="flex flex-col gap-4">
                   <textarea
@@ -946,20 +913,8 @@ export default function FeynmanPage() {
             </div>
             <div className="flex flex-col gap-3">
               <button
-                onClick={async () => {
-                  try {
-                    const res = await fetch("/api/billing/checkout", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO }),
-                    });
-                    const data = await res.json();
-                    if (data.url) {
-                      window.location.href = data.url;
-                    }
-                  } catch {
-                    // Checkout failed — silently handle
-                  }
+                onClick={() => {
+                  window.location.href = "/feynman/settings";
                 }}
                 className="w-full bg-primary hover:bg-[#0d3323] text-on-primary font-body text-[11px] tracking-[0.4em] uppercase px-14 py-4 rounded-full transition-all duration-300 submit-btn-shadow"
               >
