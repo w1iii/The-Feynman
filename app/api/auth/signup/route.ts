@@ -12,11 +12,18 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { email, password, redirectTo } = await request.json()
+  const { username, email, password, redirectTo } = await request.json()
 
-  if (!email || !password) {
+  if (!email || !password || !username) {
     return NextResponse.json(
-      { error: 'Email and password are required' },
+      { error: 'Email, password, and username are required' },
+      { status: 400 }
+    )
+  }
+
+  if (username.length < 3) {
+    return NextResponse.json(
+      { error: 'Username must be at least 3 characters' },
       { status: 400 }
     )
   }
@@ -60,6 +67,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: data.user.id,
         email: data.user.email,
+        username,
         plan: 'free',
       })
 

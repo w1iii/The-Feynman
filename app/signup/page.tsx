@@ -6,8 +6,10 @@ import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -17,10 +19,23 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
 
+    if (username.length < 3) {
+      setError("Username must be at least 3 characters");
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
     const response = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        username,
         email,
         password,
         redirectTo: `${window.location.origin}/api/auth/callback`,
@@ -86,6 +101,20 @@ export default function SignupPage() {
             )}
 
             <div className="mb-5">
+              <label htmlFor="username" className="block font-body text-[11px] tracking-[0.15em] uppercase text-on-surface-variant mb-2">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                className="w-full px-4 py-3 font-body text-[15px] text-on-background bg-background border border-outline-variant/30 rounded-lg outline-none transition-all duration-200 focus:border-primary focus:bg-surface-container-lowest"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="mb-5">
               <label htmlFor="email" className="block font-body text-[11px] tracking-[0.15em] uppercase text-on-surface-variant mb-2">
                 Email
               </label>
@@ -99,7 +128,7 @@ export default function SignupPage() {
               />
             </div>
 
-            <div className="mb-6">
+            <div className="mb-5">
               <label htmlFor="password" className="block font-body text-[11px] tracking-[0.15em] uppercase text-on-surface-variant mb-2">
                 Password
               </label>
@@ -109,6 +138,21 @@ export default function SignupPage() {
                 className="w-full px-4 py-3 font-body text-[15px] text-on-background bg-background border border-outline-variant/30 rounded-lg outline-none transition-all duration-200 focus:border-primary focus:bg-surface-container-lowest"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+                required
+              />
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="confirmPassword" className="block font-body text-[11px] tracking-[0.15em] uppercase text-on-surface-variant mb-2">
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                className="w-full px-4 py-3 font-body text-[15px] text-on-background bg-background border border-outline-variant/30 rounded-lg outline-none transition-all duration-200 focus:border-primary focus:bg-surface-container-lowest"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 minLength={6}
                 required
               />
