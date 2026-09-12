@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireEnv } from '../../../lib/env'
-
-function isAdmin(request: NextRequest) {
-  return request.cookies.get('admin_token')?.value === '1'
-}
+import { isAdmin } from '../../../lib/admin-auth'
 
 export async function GET(request: NextRequest) {
   if (!isAdmin(request)) {

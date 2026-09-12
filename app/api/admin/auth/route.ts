@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireEnv } from '../../../lib/env'
-
-const COOKIE_NAME = 'admin_token'
+import {
+  ADMIN_COOKIE_NAME,
+  ADMIN_SESSION_MAX_AGE,
+  createAdminToken,
+} from '../../../lib/admin-auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,12 +15,12 @@ export async function POST(request: NextRequest) {
     }
 
     const res = NextResponse.json({ success: true })
-    res.cookies.set(COOKIE_NAME, '1', {
+    res.cookies.set(ADMIN_COOKIE_NAME, createAdminToken(), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 8, // 8 hours
+      maxAge: ADMIN_SESSION_MAX_AGE,
     })
     return res
   } catch {
@@ -27,6 +30,6 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   const res = NextResponse.json({ success: true })
-  res.cookies.set(COOKIE_NAME, '', { maxAge: 0, path: '/' })
+  res.cookies.set(ADMIN_COOKIE_NAME, '', { maxAge: 0, path: '/' })
   return res
 }
