@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     password,
     options: {
       emailRedirectTo: redirectTo,
+      data: { full_name: username },
     },
   })
 
