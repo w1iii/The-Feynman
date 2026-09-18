@@ -26,23 +26,35 @@ The Feynman is an interactive coaching application that guides you through a str
 ### User Experience
 
 - **Multi-step Progress Tracking** — Visual dot indicators show where you are in the learning journey
-- **Session History** — Review past coaching conversations and scores (Pro feature)
 - **Real-time Criteria Checklist** — See which understanding criteria you've passed as you go
 - **Best Moment Highlight** — The app captures your strongest analogy or sentence from the session
 
 ### Authentication & Plans
 
-- **Email/Password Sign-up** — Traditional auth with Supabase
+- **Email/Password Sign-up** — Traditional auth with Supabase, username field
 - **Google OAuth** — One-click sign-in
 - **Freemium Model** — Free users get 3 sessions per day; Pro users have unlimited sessions
 - **Daily Usage Tracking** — Resets at midnight, not 24-hour rolling
 
+### Payments
+
+- **PayMongo Integration** — GCash and card payments
+- **Billing Portal** — Subscription checkout and management
+- **Payment History** — Track past transactions
+
+### Admin
+
+- **Admin Dashboard** — Manage users and payments
+- **Payment Management** — View and update payment statuses
+
 ### Technical Features
 
-- **AI Fallback** — Automatically switches to backup Groq model if primary hits rate limits
+- **AI Resilience** — Retry logic, timeout handling, fallback chain
 - **Row Level Security** — Users can only access their own data
 - **Responsive Design** — Collapsible sidebar, mobile-friendly layout
 - **Custom Typography** — Instrument Serif + DM Sans fonts
+- **Unit Tests** — Vitest suite for AI, rate-limiting, env validation
+- **E2E Tests** — Playwright for auth and landing page flows
 
 ## Tech Stack
 
@@ -54,7 +66,9 @@ The Feynman is an interactive coaching application that guides you through a str
 | **Authentication** | Supabase Auth (Email + Google OAuth) |
 | **Database** | Supabase (PostgreSQL) |
 | **AI/LLM** | Groq SDK |
-| **Styling** | PostCSS, Custom CSS |
+| **Payments** | PayMongo (GCash, cards) |
+| **Caching** | Upstash Redis |
+| **Testing** | Vitest, Playwright |
 | **Linting** | ESLint 9 |
 | **Package Manager** | npm |
 
@@ -65,6 +79,7 @@ The Feynman is an interactive coaching application that guides you through a str
 - Node.js 20+
 - A Supabase project
 - A Groq API key
+- A PayMongo API key (for payments)
 
 ### Installation
 
@@ -82,12 +97,29 @@ npm install
 # NEXT_PUBLIC_SUPABASE_ANON_KEY=
 # SUPABASE_SERVICE_ROLE_KEY=
 # GROQ_API_KEY=
+# PAYMONGO_SECRET_KEY=
+# PAYMONGO_PUBLIC_KEY=
+# UPSTASH_REDIS_REST_URL=
+# UPSTASH_REDIS_REST_TOKEN=
 
 # Run the development server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the app.
+
+### Testing
+
+```bash
+# Unit tests
+npm test
+
+# E2E tests
+npm run test:e2e
+
+# E2E with UI
+npm run test:e2e:ui
+```
 
 ## Project Structure
 
@@ -96,8 +128,11 @@ app/
 ├── page.tsx              # Landing page
 ├── layout.tsx            # Root layout
 ├── login/page.tsx        # Login page
-├── signup/page.tsx       # Sign up page
+├── signup/page.tsx       # Sign up page (with username)
 ├── feynman/page.tsx      # Main coaching app
+├── admin/
+│   ├── page.tsx          # Admin dashboard
+│   └── payments/         # Payment management
 ├── api/
 │   ├── auth/             # Auth endpoints (login, signup, logout, callback)
 │   ├── coach/route.ts    # AI coaching endpoint
@@ -105,11 +140,23 @@ app/
 │   ├── newsession/route.ts  # Create new session
 │   ├── getsession/route.ts  # Fetch sessions
 │   ├── session/[id]/route.ts  # Individual session
-│   └── profile/route.ts  # User profile/plan
+│   ├── profile/route.ts  # User profile/plan
+│   ├── billing/          # Subscription checkout & portal
+│   ├── payments/         # Payment processing
+│   ├── daily-usage/      # Usage tracking
+│   ├── deletesession/    # Session cleanup
+│   └── stats/            # User statistics
 └── lib/
     ├── supabase/         # Supabase client (browser + server)
-    ├── db.ts             # Database utilities
-    └── redis.ts          # Redis utilities (planned)
+    ├── ai/               # AI coaching logic with retry/fallback
+    ├── paymongo/         # PayMongo payment client
+    ├── redis/            # Upstash Redis cache
+    ├── context/          # User context provider
+    ├── api/              # API utilities
+    ├── admin-auth.ts     # Admin authentication
+    ├── env.ts            # Environment validation
+    ├── rate-limit.ts     # Rate limiting
+    └── db.ts             # Database utilities
 ```
 
 ## The 5 Criteria
